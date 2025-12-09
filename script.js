@@ -3,11 +3,12 @@ const SUPABASE_URL = 'https://fdgxueegvlcyopolswpw.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZkZ3h1ZWVndmxjeW9wb2xzd3B3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNjUzMzYsImV4cCI6MjA4MDg0MTMzNn0.uWVZfcJ_95IDennMWHpnk2JiGrcun3DnKQPEEC_rYos';
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// VARIÁVEIS GLOBAIS
+// --- VARIÁVEIS GLOBAIS ---
 let scannerAtivo = null;
-let produtoSelecionado = null;
+let produtoSelecionado = null; // Para movimentação
+let produtoEmEdicaoId = null;  // Para saber se é novo cadastro ou edição
 
-// ELEMENTOS DOM
+// --- ELEMENTOS DOM ---
 const els = {
     btnHome: document.getElementById('btn-home'),
     titulo: document.getElementById('titulo-pagina'),
@@ -15,27 +16,31 @@ const els = {
     // Telas
     telaMenu: document.getElementById('tela-menu'),
     telaMov: document.getElementById('tela-movimentacao'),
+    telaGestao: document.getElementById('tela-gestao'),
     telaCad: document.getElementById('tela-cadastro'),
 
-    // Movimentação - Busca e Scanner
-    containerBuscaManual: document.getElementById('busca-manual-container'),
-    inputBusca: document.getElementById('input-busca-manual'),
-    btnBuscarManual: document.getElementById('btn-buscar-manual'),
+    // Gestão
+    listaGestao: document.getElementById('lista-gestao-produtos'),
+    inputBuscaGestao: document.getElementById('input-busca-gestao'),
+    btnBuscaGestao: document.getElementById('btn-busca-gestao'),
+
+    // Movimentação
+    inputBuscaMov: document.getElementById('input-busca-manual'),
+    btnBuscarMov: document.getElementById('btn-buscar-manual'),
     btnAtivarScanner: document.getElementById('btn-ativar-scanner'),
     areaScannerMov: document.getElementById('area-scanner-mov'),
-    
-    // Movimentação - Formulário
     formMov: document.getElementById('form-movimentacao'),
+    
+    // Campos Movimentação
     movNome: document.getElementById('mov-nome-produto'),
-    movCodigo: document.getElementById('mov-codigo-produto'),
     movSaldo: document.getElementById('mov-saldo-atual'),
     movQtd: document.getElementById('mov-qtd'),
     movDestino: document.getElementById('mov-destino'),
-    boxDestino: document.getElementById('box-destino'),
     btnConfirmarMov: document.getElementById('btn-confirmar-mov'),
-    radiosMov: document.getElementsByName('tipo_mov'),
 
-    // Cadastro
+    // Cadastro / Edição
+    tituloCadastro: document.getElementById('titulo-cadastro'),
+    cadId: document.getElementById('cad-id-editar'),
     cadCodigo: document.getElementById('cad-codigo'),
     cadNome: document.getElementById('cad-nome'),
     cadUnidade: document.getElementById('cad-unidade'),
@@ -47,6 +52,7 @@ const els = {
     listaResumo: document.getElementById('lista-resumo')
 };
 
+// --- INICIALIZAÇÃO ---
 window.onload = () => {
     carregarDestinos();
     atualizarResumo();
@@ -54,9 +60,11 @@ window.onload = () => {
 
 // --- NAVEGAÇÃO ---
 function navegar(destino) {
+    // Esconde todas
     document.querySelectorAll('.tela').forEach(t => t.classList.remove('ativa'));
     els.btnHome.style.display = 'block';
-
+    
+    // Ações específicas de cada tela
     if (destino === 'home') {
         els.telaMenu.classList.add('ativa');
         els.titulo.innerText = 'Menu Principal';
@@ -68,45 +76,192 @@ function navegar(destino) {
         els.telaMov.classList.add('ativa');
         els.titulo.innerText = 'Movimentação';
         resetarMovimentacao();
-    } 
+    }
+    else if (destino === 'gestao') {
+        els.telaGestao.classList.add('ativa');
+        els.titulo.innerText = 'Gerenciar Produtos';
+        carregarListaGestao(); // Carrega a lista ao abrir
+    }
     else if (destino === 'cadastro') {
         els.telaCad.classList.add('ativa');
-        els.titulo.innerText = 'Novo Cadastro';
-        els.cadCodigo.value = '';
-        els.cadNome.value = '';
+        resetarFormCadastro(); // Limpa para novo cadastro
     }
 }
 
 els.btnHome.addEventListener('click', () => navegar('home'));
 
-// --- LÓGICA DE MOVIMENTAÇÃO ---
+// =======================================================
+// --- LÓGICA DE GESTÃO (NOVO) ---
+// =======================================================
+
+async function carregarListaGestao(filtro = '') {
+    els.listaGestao.innerHTML = '<p style="text-align:center">Carregando...</p>';
+    
+    let query = supabase.from('produtos').select('*').order('nome');
+
+    if (filtro) {
+        query = query.ilike('nome', `%${filtro}%`);
+    }
+
+    const { data, error } = await query;
+
+    if (error) return alert("Erro ao carregar itens.");
+    
+    if (data.length === 0) {
+        els.listaGestao.innerHTML = '<p style="text-align:center">Nenhum produto encontrado.</p>';
+        return;
+    }
+
+    els.listaGestao.innerHTML = data.map(p => `
+        <li class="item-gestao">
+            <div>
+                <strong>${p.nome}</strong><br>
+                <small>Cód: ${p.codigo_barras || '-'}</small><br>
+                <span style="color:var(--primary)">Estoque: ${p.quantidade_atual} ${p.unidade}</span>
+            </div>
+            <div class="acoes-gestao">
+                <button onclick="prepararEdicao(${p.id})" class="btn-icon-acao cor-edit">
+                    <span class="material-icons">edit</span>
+                </button>
+                <button onclick="excluirProduto(${p.id})" class="btn-icon-acao cor-del">
+                    <span class="material-icons">delete</span>
+                </button>
+            </div>
+        </li>
+    `).join('');
+}
+
+// Busca na tela de gestão
+els.btnBuscaGestao.addEventListener('click', () => {
+    carregarListaGestao(els.inputBuscaGestao.value);
+});
+
+// Ação de Excluir
+window.excluirProduto = async (id) => {
+    if(!confirm("Tem certeza que deseja excluir? Isso não apagará o histórico de movimentações, mas removerá o produto da lista.")) return;
+
+    const { error } = await supabase.from('produtos').delete().eq('id', id);
+
+    if (error) {
+        // Se houver restrição de chave estrangeira (histórico), o Supabase pode bloquear.
+        alert("Erro: Talvez este produto tenha movimentações registradas e não possa ser excluído completamente.");
+    } else {
+        alert("Produto excluído.");
+        carregarListaGestao();
+    }
+};
+
+// Ação de Editar (Leva para tela de cadastro preenchida)
+window.prepararEdicao = async (id) => {
+    const { data } = await supabase.from('produtos').select('*').eq('id', id).single();
+    if(data) {
+        els.telaGestao.classList.remove('ativa');
+        els.telaCad.classList.add('ativa');
+        els.titulo.innerText = 'Editar Produto';
+        els.tituloCadastro.innerText = 'Editando: ' + data.nome;
+
+        produtoEmEdicaoId = data.id; // Marca que é edição
+        els.cadCodigo.value = data.codigo_barras || '';
+        els.cadNome.value = data.nome;
+        els.cadUnidade.value = data.unidade;
+    }
+};
+
+// =======================================================
+// --- LÓGICA DE CADASTRO / SALVAR (ATUALIZADA) ---
+// =======================================================
+
+function resetarFormCadastro() {
+    produtoEmEdicaoId = null; // Reseta para modo "Novo"
+    els.titulo.innerText = 'Novo Cadastro';
+    els.tituloCadastro.innerText = 'Cadastrar Novo Item';
+    els.cadCodigo.value = '';
+    els.cadNome.value = '';
+    els.cadUnidade.value = 'un';
+}
+
+els.btnSalvarNovo.addEventListener('click', async () => {
+    const cod = els.cadCodigo.value;
+    const nome = els.cadNome.value;
+    const unid = els.cadUnidade.value;
+
+    if (!nome) return alert("Nome é obrigatório.");
+
+    const dados = {
+        codigo_barras: cod,
+        nome: nome,
+        unidade: unid
+    };
+
+    let erro = null;
+
+    if (produtoEmEdicaoId) {
+        // UPDATE
+        const { error } = await supabase
+            .from('produtos')
+            .update(dados)
+            .eq('id', produtoEmEdicaoId);
+        erro = error;
+    } else {
+        // INSERT
+        // Define saldo inicial 0 para novos
+        dados.quantidade_atual = 0;
+        const { error } = await supabase
+            .from('produtos')
+            .insert(dados);
+        erro = error;
+    }
+
+    if (!erro) {
+        alert(produtoEmEdicaoId ? "Produto atualizado!" : "Produto cadastrado!");
+        // Se veio da gestão, volta pra gestão. Se não, vai pro menu.
+        if(produtoEmEdicaoId) {
+            navegar('gestao');
+        } else {
+            navegar('home');
+        }
+    } else {
+        alert("Erro ao salvar. Verifique se o código já existe.");
+        console.error(erro);
+    }
+});
+
+// Scanner Cadastro
+els.btnScanCad.addEventListener('click', () => {
+    els.areaScannerCad.classList.remove('hidden');
+    iniciarScanner("reader-cad", (codigo) => {
+        els.cadCodigo.value = codigo;
+        pararScannerCadastro();
+    });
+});
+function pararScannerCadastro() {
+    pararScanner();
+    els.areaScannerCad.classList.add('hidden');
+}
+
+// =======================================================
+// --- LÓGICA DE MOVIMENTAÇÃO (MANTIDA) ---
+// =======================================================
 
 function resetarMovimentacao() {
-    // Exibe a busca e esconde o form de resultado
-    els.containerBuscaManual.classList.remove('hidden');
+    document.getElementById('busca-manual-container').classList.remove('hidden');
     els.formMov.classList.add('hidden');
     els.areaScannerMov.classList.add('hidden');
-    
-    els.inputBusca.value = '';
+    els.inputBuscaMov.value = '';
     els.movQtd.value = '';
     pararScanner();
 }
 
-// 1. Botão Buscar Manual (Código ou Nome)
-els.btnBuscarManual.addEventListener('click', async () => {
-    const termo = els.inputBusca.value.trim();
-    if (!termo) return alert("Digite um código ou nome.");
-    buscarProduto(termo);
+els.btnBuscarMov.addEventListener('click', () => {
+    const termo = els.inputBuscaMov.value.trim();
+    if(termo) buscarProdutoMov(termo);
 });
 
-// 2. Botão Ativar Scanner
 els.btnAtivarScanner.addEventListener('click', () => {
     els.areaScannerMov.classList.remove('hidden');
-    iniciarScanner("reader-mov", (codigoLido) => {
-        // Callback de sucesso do scanner
+    iniciarScanner("reader-mov", (codigo) => {
         pararScanner();
-        els.areaScannerMov.classList.add('hidden');
-        buscarProduto(codigoLido);
+        buscarProdutoMov(codigo);
     });
 });
 
@@ -115,68 +270,29 @@ function pararScannerMovimentacao() {
     els.areaScannerMov.classList.add('hidden');
 }
 
-// BUSCA UNIFICADA (Serve tanto pro scanner quanto pro manual)
-async function buscarProduto(termo) {
-    // Tenta achar pelo código exato
-    let { data, error } = await supabase
-        .from('produtos')
-        .select('*')
-        .eq('codigo_barras', termo)
-        .single();
-
-    // Se não achou por código, tenta por nome (case insensitive)
+async function buscarProdutoMov(termo) {
+    let { data } = await supabase.from('produtos').select('*').eq('codigo_barras', termo).single();
+    
     if (!data) {
-        const { data: list, error: errNome } = await supabase
-            .from('produtos')
-            .select('*')
-            .ilike('nome', `%${termo}%`)
-            .limit(1); // Pega o primeiro que encontrar parecido
-        
-        if (list && list.length > 0) {
-            data = list[0];
-        }
+        const { data: list } = await supabase.from('produtos').select('*').ilike('nome', `%${termo}%`).limit(1);
+        if (list && list.length > 0) data = list[0];
     }
 
     if (data) {
-        exibirFormularioMovimento(data);
+        produtoSelecionado = data;
+        document.getElementById('busca-manual-container').classList.add('hidden');
+        els.areaScannerMov.classList.add('hidden'); // garante que fecha scan
+        els.formMov.classList.remove('hidden');
+        
+        els.movNome.innerText = data.nome;
+        els.movSaldo.innerText = `Saldo: ${data.quantidade_atual} ${data.unidade}`;
+        atualizarEstiloBotaoMov();
     } else {
-        alert("Produto não encontrado! Verifique o código ou nome.");
+        alert("Produto não encontrado.");
     }
 }
 
-function exibirFormularioMovimento(produto) {
-    produtoSelecionado = produto;
-    
-    // Esconde a busca e mostra o formulário
-    els.containerBuscaManual.classList.add('hidden');
-    els.formMov.classList.remove('hidden');
-
-    els.movNome.innerText = produto.nome;
-    els.movCodigo.innerText = `Cód: ${produto.codigo_barras || 'S/N'}`;
-    els.movSaldo.innerText = `Estoque Atual: ${produto.quantidade_atual} ${produto.unidade}`;
-    
-    // Define a cor do botão baseado no tipo atual
-    atualizarEstiloBotaoMov();
-}
-
-// Lógica de Entrada e Saída
-els.radiosMov.forEach(radio => {
-    radio.addEventListener('change', atualizarEstiloBotaoMov);
-});
-
-function atualizarEstiloBotaoMov() {
-    const tipo = document.querySelector('input[name="tipo_mov"]:checked').value;
-    if (tipo === 'ENTRADA') {
-        els.boxDestino.style.display = 'none';
-        els.btnConfirmarMov.innerText = "CONFIRMAR ENTRADA";
-        els.btnConfirmarMov.style.backgroundColor = "var(--primary)"; // Verde
-    } else {
-        els.boxDestino.style.display = 'block';
-        els.btnConfirmarMov.innerText = "CONFIRMAR SAÍDA";
-        els.btnConfirmarMov.style.backgroundColor = "var(--saida)"; // Laranja
-    }
-}
-
+// Botão Confirmar Movimentação
 els.btnConfirmarMov.addEventListener('click', async () => {
     const tipo = document.querySelector('input[name="tipo_mov"]:checked').value;
     const qtd = parseFloat(els.movQtd.value);
@@ -185,114 +301,77 @@ els.btnConfirmarMov.addEventListener('click', async () => {
     if (!qtd || qtd <= 0) return alert("Quantidade inválida.");
     
     let novoSaldo = parseFloat(produtoSelecionado.quantidade_atual);
-    
     if (tipo === 'SAIDA') {
-        if (qtd > novoSaldo) return alert(`Saldo insuficiente! Você tem ${novoSaldo}.`);
+        if (qtd > novoSaldo) return alert("Saldo insuficiente.");
         novoSaldo -= qtd;
     } else {
         novoSaldo += qtd;
     }
 
-    // Salvar Movimentação
-    const { error: errMov } = await supabase.from('movimentacoes').insert({
-        produto_id: produtoSelecionado.id,
-        tipo: tipo,
-        quantidade: qtd,
-        destino_id: (tipo === 'SAIDA' ? destino : null)
+    const { error: e1 } = await supabase.from('movimentacoes').insert({
+        produto_id: produtoSelecionado.id, tipo, quantidade: qtd, destino_id: (tipo === 'SAIDA' ? destino : null)
     });
+    const { error: e2 } = await supabase.from('produtos').update({ quantidade_atual: novoSaldo }).eq('id', produtoSelecionado.id);
 
-    // Atualizar Produto
-    const { error: errProd } = await supabase.from('produtos')
-        .update({ quantidade_atual: novoSaldo })
-        .eq('id', produtoSelecionado.id);
-
-    if (!errMov && !errProd) {
-        alert("Movimentação realizada!");
+    if (!e1 && !e2) {
+        alert("Movimentação registrada!");
         navegar('home');
     } else {
-        alert("Erro ao salvar no sistema.");
-        console.error(errMov, errProd);
+        alert("Erro ao salvar.");
     }
 });
 
-// --- SCANNER GENÉRICO ---
-function iniciarScanner(elementoId, callback) {
+// Estilo botão Entrada/Saida
+document.querySelectorAll('input[name="tipo_mov"]').forEach(r => {
+    r.addEventListener('change', atualizarEstiloBotaoMov);
+});
+function atualizarEstiloBotaoMov() {
+    const tipo = document.querySelector('input[name="tipo_mov"]:checked').value;
+    const boxDestino = document.getElementById('box-destino');
+    if (tipo === 'ENTRADA') {
+        boxDestino.style.display = 'none';
+        els.btnConfirmarMov.innerText = "CONFIRMAR ENTRADA";
+        els.btnConfirmarMov.style.backgroundColor = "var(--primary)";
+    } else {
+        boxDestino.style.display = 'block';
+        els.btnConfirmarMov.innerText = "CONFIRMAR SAÍDA";
+        els.btnConfirmarMov.style.backgroundColor = "var(--saida)";
+    }
+}
+
+// =======================================================
+// --- UTILITÁRIOS GERAIS ---
+// =======================================================
+
+function iniciarScanner(elemId, callback) {
     if (scannerAtivo) scannerAtivo.clear();
-    scannerAtivo = new Html5Qrcode(elementoId);
-    
-    scannerAtivo.start(
-        { facingMode: "environment" }, 
-        { fps: 10, qrbox: { width: 250, height: 250 } }, 
-        (decodedText) => callback(decodedText)
-    ).catch(err => alert("Erro ao abrir câmera: " + err));
+    scannerAtivo = new Html5Qrcode(elemId);
+    scannerAtivo.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, callback)
+        .catch(err => alert("Erro na câmera: " + err));
 }
 
 function pararScanner() {
     if (scannerAtivo) {
-        scannerAtivo.stop().catch(() => {});
+        scannerAtivo.stop().catch(()=>{});
         scannerAtivo = null;
     }
 }
 
-// --- CADASTRO ---
-els.btnScanCad.addEventListener('click', () => {
-    els.areaScannerCad.classList.remove('hidden');
-    iniciarScanner("reader-cad", (codigo) => {
-        els.cadCodigo.value = codigo;
-        pararScannerCadastro();
-    });
-});
-
-function pararScannerCadastro() {
-    pararScanner();
-    els.areaScannerCad.classList.add('hidden');
-}
-
-els.btnSalvarNovo.addEventListener('click', async () => {
-    const cod = els.cadCodigo.value;
-    const nome = els.cadNome.value;
-    const unid = els.cadUnidade.value;
-
-    if (!nome) return alert("Preencha o nome.");
-
-    const { error } = await supabase.from('produtos').insert({
-        codigo_barras: cod, nome: nome, unidade: unid, quantidade_atual: 0
-    });
-
-    if (!error) {
-        alert("Cadastrado com sucesso!");
-        navegar('home');
-    } else {
-        alert("Erro! Código duplicado?");
-    }
-});
-
-// --- LOADERS ---
 async function carregarDestinos() {
     const { data } = await supabase.from('destinos').select('*');
     if (data) els.movDestino.innerHTML = data.map(d => `<option value="${d.id}">${d.nome}</option>`).join('');
 }
 
 async function atualizarResumo() {
-    // Lista as ultimas movimentações para dar feedback visual
-    const { data } = await supabase
-        .from('movimentacoes')
-        .select(`
-            tipo, quantidade, criado_em,
-            produtos (nome, unidade)
-        `)
-        .order('criado_em', { ascending: false })
-        .limit(5);
+    const { data } = await supabase.from('movimentacoes')
+        .select(`tipo, quantidade, produtos (nome, unidade)`)
+        .order('criado_em', { ascending: false }).limit(4);
 
     if (data) {
         els.listaResumo.innerHTML = data.map(m => {
             const cor = m.tipo === 'ENTRADA' ? 'green' : 'orange';
             const sinal = m.tipo === 'ENTRADA' ? '+' : '-';
-            return `
-            <li>
-                <span>${m.produtos.nome}</span>
-                <strong style="color:${cor}">${sinal}${m.quantidade} ${m.produtos.unidade}</strong>
-            </li>`;
+            return `<li><span>${m.produtos.nome}</span><strong style="color:${cor}">${sinal}${m.quantidade} ${m.produtos.unidade}</strong></li>`;
         }).join('');
     }
 }

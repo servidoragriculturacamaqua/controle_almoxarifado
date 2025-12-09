@@ -24,90 +24,108 @@
             <div class="menu-grid">
                 <button onclick="navegar('movimentacao')" class="card-menu principal">
                     <span class="material-icons big-icon">sync_alt</span>
-                    <span>Movimentar Estoque<br><small>(Entrada / Saída)</small></span>
+                    <span>Movimentar Estoque<br><small>(Entradas e Saídas)</small></span>
                 </button>
 
-                <button onclick="navegar('cadastro')" class="card-menu secundaria">
-                    <span class="material-icons big-icon">add_circle</span>
-                    <span>Cadastrar Novo Item</span>
+                <button onclick="navegar('gestao')" class="card-menu secundaria">
+                    <span class="material-icons big-icon">inventory_2</span>
+                    <span>Gerenciar Produtos<br><small>(Editar, Excluir, Listar)</small></span>
+                </button>
+
+                <button onclick="navegar('cadastro')" class="card-menu neutra">
+                    <span class="material-icons">add_circle</span>
+                    <span>Novo Cadastro</span>
                 </button>
 
                 <div class="card-info">
-                    <h3>📦 Últimas Movimentações</h3>
+                    <h3>📊 Resumo Recente</h3>
                     <ul id="lista-resumo"><li>Carregando...</li></ul>
                 </div>
             </div>
         </section>
 
         <section id="tela-movimentacao" class="tela">
-            
             <div id="busca-manual-container" class="card-busca">
-                <label>Buscar Produto:</label>
+                <label>Movimentar Item:</label>
                 <div class="input-row">
-                    <input type="text" id="input-busca-manual" placeholder="Digite Cód. Barras ou Nome">
+                    <input type="text" id="input-busca-manual" placeholder="Busque por Nome ou Código">
                     <button id="btn-buscar-manual" class="btn-mini azul">
                         <span class="material-icons">search</span>
                     </button>
                 </div>
                 <div class="divider">OU</div>
                 <button id="btn-ativar-scanner" class="btn-secondary">
-                    <span class="material-icons">qr_code_scanner</span> Ler com a Câmera
+                    <span class="material-icons">qr_code_scanner</span> Ler Código
                 </button>
             </div>
 
             <div id="area-scanner-mov" class="scanner-box hidden">
                 <div id="reader-mov"></div>
                 <button onclick="pararScannerMovimentacao()" class="btn-mini-danger">Fechar Câmera</button>
-                <p class="instrucao">Aponte para o código</p>
             </div>
 
             <div id="form-movimentacao" class="form-container hidden">
                 <div class="produto-header">
-                    <h2 id="mov-nome-produto">Produto...</h2>
-                    <small id="mov-codigo-produto">Cód: ...</small>
+                    <h2 id="mov-nome-produto">...</h2>
+                    <small id="mov-codigo-produto">...</small>
                 </div>
-                
-                <p id="mov-saldo-atual" class="destaque-saldo">Saldo: ...</p>
-                
+                <p id="mov-saldo-atual" class="destaque-saldo">...</p>
                 <input type="hidden" id="mov-id-produto">
 
                 <div class="switch-tipo">
                     <input type="radio" name="tipo_mov" id="tipo-saida" value="SAIDA" checked>
-                    <label for="tipo-saida" class="lbl-saida">SAÍDA (Usar)</label>
-
+                    <label for="tipo-saida">SAÍDA (Usar)</label>
                     <input type="radio" name="tipo_mov" id="tipo-entrada" value="ENTRADA">
-                    <label for="tipo-entrada" class="lbl-entrada">ENTRADA (Repor)</label>
+                    <label for="tipo-entrada">ENTRADA (Repor)</label>
                 </div>
 
                 <label>Quantidade:</label>
                 <input type="number" id="mov-qtd" placeholder="0" class="input-big" inputmode="decimal">
 
                 <div id="box-destino">
-                    <label>Destino / Máquina:</label>
+                    <label>Destino:</label>
                     <select id="mov-destino" class="input-big"></select>
                 </div>
 
                 <button id="btn-confirmar-mov" class="btn-action">CONFIRMAR</button>
-                <button onclick="resetarMovimentacao()" class="btn-text">Cancelar / Buscar Outro</button>
+                <button onclick="resetarMovimentacao()" class="btn-text">Cancelar</button>
             </div>
+        </section>
+
+        <section id="tela-gestao" class="tela">
+            <div class="card-busca">
+                <div class="input-row">
+                    <input type="text" id="input-busca-gestao" placeholder="Filtrar produtos...">
+                    <button id="btn-busca-gestao" class="btn-mini azul"><span class="material-icons">search</span></button>
+                </div>
+            </div>
+            
+            <div class="lista-container">
+                <ul id="lista-gestao-produtos">
+                    </ul>
+            </div>
+            
+            <button onclick="navegar('cadastro')" class="btn-float">
+                <span class="material-icons">add</span>
+            </button>
         </section>
 
         <section id="tela-cadastro" class="tela">
             <div class="form-container">
-                <h3>Novo Cadastro</h3>
-                <label>Código de Barras:</label>
+                <h3 id="titulo-cadastro">Novo Cadastro</h3>
+                <input type="hidden" id="cad-id-editar"> <label>Código de Barras:</label>
                 <div class="input-row">
-                    <input type="text" id="cad-codigo" placeholder="Escaneie ou digite">
+                    <input type="text" id="cad-codigo" placeholder="Scan ou Digite">
                     <button id="btn-scan-cad" class="btn-mini"><span class="material-icons">qr_code</span></button>
                 </div>
                 
                 <div id="reader-cad-container" class="hidden scanner-box">
                     <div id="reader-cad"></div>
-                    <button onclick="pararScannerCadastro()" class="btn-mini-danger">Fechar Câmera</button>
+                    <button onclick="pararScannerCadastro()" class="btn-mini-danger">Fechar</button>
                 </div>
 
-                <label>Nome do Material:</label>
-                <input type="text" id="cad-nome" placeholder="Ex: Adubo NPK">
+                <label>Nome:</label>
+                <input type="text" id="cad-nome" placeholder="Ex: Óleo Diesel">
 
                 <label>Unidade:</label>
                 <select id="cad-unidade">
@@ -119,7 +137,7 @@
                     <option value="sc">Saco</option>
                 </select>
 
-                <button id="btn-salvar-novo" class="btn-action verde">CADASTRAR</button>
+                <button id="btn-salvar-novo" class="btn-action verde">SALVAR</button>
             </div>
         </section>
 
