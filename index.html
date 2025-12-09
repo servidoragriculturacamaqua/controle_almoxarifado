@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Estoque Agricultura</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+</head>
+<body>
+
+    <header>
+        <button id="btn-home" class="btn-icon-header" style="display: none;">
+            <span class="material-icons">arrow_back</span>
+        </button>
+        <h1 id="titulo-pagina">Menu Principal</h1>
+    </header>
+
+    <main>
+        
+        <section id="tela-menu" class="tela ativa">
+            <div class="menu-grid">
+                <button onclick="navegar('movimentacao')" class="card-menu principal">
+                    <span class="material-icons big-icon">qr_code_scanner</span>
+                    <span>Movimentar Estoque<br><small>(Entrada/Saída)</small></span>
+                </button>
+
+                <button onclick="navegar('cadastro')" class="card-menu secundaria">
+                    <span class="material-icons big-icon">add_circle</span>
+                    <span>Cadastrar Novo Item</span>
+                </button>
+
+                <div class="card-info">
+                    <h3>📦 Resumo Rápido</h3>
+                    <ul id="lista-resumo">
+                        <li>Carregando...</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="tela-movimentacao" class="tela">
+            <div id="area-scanner-mov" class="scanner-box">
+                <div id="reader-mov"></div>
+                <p class="instrucao">Aponte a câmera para o código</p>
+            </div>
+
+            <div id="form-movimentacao" class="form-container hidden">
+                <h2 id="mov-nome-produto">Produto...</h2>
+                <p id="mov-saldo-atual" class="destaque-saldo">Saldo: ...</p>
+                
+                <input type="hidden" id="mov-id-produto">
+
+                <div class="switch-tipo">
+                    <input type="radio" name="tipo_mov" id="tipo-saida" value="SAIDA" checked>
+                    <label for="tipo-saida" class="lbl-saida">SAÍDA (Usar)</label>
+
+                    <input type="radio" name="tipo_mov" id="tipo-entrada" value="ENTRADA">
+                    <label for="tipo-entrada" class="lbl-entrada">ENTRADA (Comprar)</label>
+                </div>
+
+                <label>Quantidade:</label>
+                <input type="number" id="mov-qtd" placeholder="0" class="input-big">
+
+                <div id="box-destino">
+                    <label>Destino (Onde será usado?):</label>
+                    <select id="mov-destino" class="input-big"></select>
+                </div>
+
+                <button id="btn-confirmar-mov" class="btn-action">CONFIRMAR</button>
+                <button onclick="resetarMovimentacao()" class="btn-text">Ler Outro Código</button>
+            </div>
+        </section>
+
+        <section id="tela-cadastro" class="tela">
+            <div class="form-container">
+                <label>Código de Barras:</label>
+                <div class="input-row">
+                    <input type="text" id="cad-codigo" placeholder="Escaneie ou digite">
+                    <button id="btn-scan-cad" class="btn-mini"><span class="material-icons">qr_code</span></button>
+                </div>
+                <div id="reader-cad-container" class="hidden scanner-box">
+                    <div id="reader-cad"></div>
+                    <button onclick="pararScannerCadastro()" class="btn-mini-danger">Fechar Câmera</button>
+                </div>
+
+                <label>Nome da Peça/Material:</label>
+                <input type="text" id="cad-nome" placeholder="Ex: Filtro de Ar Trator">
+
+                <label>Unidade de Medida:</label>
+                <select id="cad-unidade">
+                    <option value="un">Unidade (Peça)</option>
+                    <option value="lt">Litros</option>
+                    <option value="cx">Caixa</option>
+                    <option value="kg">Quilos</option>
+                    <option value="m">Metros</option>
+                </select>
+
+                <button id="btn-salvar-novo" class="btn-action verde">SALVAR PRODUTO</button>
+            </div>
+        </section>
+
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
