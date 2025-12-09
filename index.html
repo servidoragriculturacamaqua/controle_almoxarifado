@@ -23,8 +23,8 @@
         <section id="tela-menu" class="tela ativa">
             <div class="menu-grid">
                 <button onclick="navegar('movimentacao')" class="card-menu principal">
-                    <span class="material-icons big-icon">qr_code_scanner</span>
-                    <span>Movimentar Estoque<br><small>(Entrada/Saída)</small></span>
+                    <span class="material-icons big-icon">sync_alt</span>
+                    <span>Movimentar Estoque<br><small>(Entrada / Saída)</small></span>
                 </button>
 
                 <button onclick="navegar('cadastro')" class="card-menu secundaria">
@@ -33,22 +33,40 @@
                 </button>
 
                 <div class="card-info">
-                    <h3>📦 Resumo Rápido</h3>
-                    <ul id="lista-resumo">
-                        <li>Carregando...</li>
-                    </ul>
+                    <h3>📦 Últimas Movimentações</h3>
+                    <ul id="lista-resumo"><li>Carregando...</li></ul>
                 </div>
             </div>
         </section>
 
         <section id="tela-movimentacao" class="tela">
-            <div id="area-scanner-mov" class="scanner-box">
+            
+            <div id="busca-manual-container" class="card-busca">
+                <label>Buscar Produto:</label>
+                <div class="input-row">
+                    <input type="text" id="input-busca-manual" placeholder="Digite Cód. Barras ou Nome">
+                    <button id="btn-buscar-manual" class="btn-mini azul">
+                        <span class="material-icons">search</span>
+                    </button>
+                </div>
+                <div class="divider">OU</div>
+                <button id="btn-ativar-scanner" class="btn-secondary">
+                    <span class="material-icons">qr_code_scanner</span> Ler com a Câmera
+                </button>
+            </div>
+
+            <div id="area-scanner-mov" class="scanner-box hidden">
                 <div id="reader-mov"></div>
-                <p class="instrucao">Aponte a câmera para o código</p>
+                <button onclick="pararScannerMovimentacao()" class="btn-mini-danger">Fechar Câmera</button>
+                <p class="instrucao">Aponte para o código</p>
             </div>
 
             <div id="form-movimentacao" class="form-container hidden">
-                <h2 id="mov-nome-produto">Produto...</h2>
+                <div class="produto-header">
+                    <h2 id="mov-nome-produto">Produto...</h2>
+                    <small id="mov-codigo-produto">Cód: ...</small>
+                </div>
+                
                 <p id="mov-saldo-atual" class="destaque-saldo">Saldo: ...</p>
                 
                 <input type="hidden" id="mov-id-produto">
@@ -58,52 +76,54 @@
                     <label for="tipo-saida" class="lbl-saida">SAÍDA (Usar)</label>
 
                     <input type="radio" name="tipo_mov" id="tipo-entrada" value="ENTRADA">
-                    <label for="tipo-entrada" class="lbl-entrada">ENTRADA (Comprar)</label>
+                    <label for="tipo-entrada" class="lbl-entrada">ENTRADA (Repor)</label>
                 </div>
 
                 <label>Quantidade:</label>
-                <input type="number" id="mov-qtd" placeholder="0" class="input-big">
+                <input type="number" id="mov-qtd" placeholder="0" class="input-big" inputmode="decimal">
 
                 <div id="box-destino">
-                    <label>Destino (Onde será usado?):</label>
+                    <label>Destino / Máquina:</label>
                     <select id="mov-destino" class="input-big"></select>
                 </div>
 
                 <button id="btn-confirmar-mov" class="btn-action">CONFIRMAR</button>
-                <button onclick="resetarMovimentacao()" class="btn-text">Ler Outro Código</button>
+                <button onclick="resetarMovimentacao()" class="btn-text">Cancelar / Buscar Outro</button>
             </div>
         </section>
 
         <section id="tela-cadastro" class="tela">
             <div class="form-container">
+                <h3>Novo Cadastro</h3>
                 <label>Código de Barras:</label>
                 <div class="input-row">
                     <input type="text" id="cad-codigo" placeholder="Escaneie ou digite">
                     <button id="btn-scan-cad" class="btn-mini"><span class="material-icons">qr_code</span></button>
                 </div>
+                
                 <div id="reader-cad-container" class="hidden scanner-box">
                     <div id="reader-cad"></div>
                     <button onclick="pararScannerCadastro()" class="btn-mini-danger">Fechar Câmera</button>
                 </div>
 
-                <label>Nome da Peça/Material:</label>
-                <input type="text" id="cad-nome" placeholder="Ex: Filtro de Ar Trator">
+                <label>Nome do Material:</label>
+                <input type="text" id="cad-nome" placeholder="Ex: Adubo NPK">
 
-                <label>Unidade de Medida:</label>
+                <label>Unidade:</label>
                 <select id="cad-unidade">
-                    <option value="un">Unidade (Peça)</option>
+                    <option value="un">Unidade</option>
                     <option value="lt">Litros</option>
-                    <option value="cx">Caixa</option>
                     <option value="kg">Quilos</option>
+                    <option value="cx">Caixa</option>
                     <option value="m">Metros</option>
+                    <option value="sc">Saco</option>
                 </select>
 
-                <button id="btn-salvar-novo" class="btn-action verde">SALVAR PRODUTO</button>
+                <button id="btn-salvar-novo" class="btn-action verde">CADASTRAR</button>
             </div>
         </section>
 
     </main>
-
     <script src="script.js"></script>
 </body>
 </html>

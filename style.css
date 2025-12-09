@@ -1,21 +1,20 @@
 :root {
-    --primary: #27ae60; /* Verde Agricultura */
-    --accent: #2c3e50;  /* Azul Escuro */
-    --bg: #f4f6f8;
+    --primary: #27ae60;
+    --accent: #2980b9; /* Azul para busca */
+    --bg: #eceff1;
     --white: #ffffff;
-    --danger: #e74c3c;
-    --saida: #e67e22; /* Laranja para saída */
+    --danger: #c0392b;
+    --saida: #d35400;
 }
 
 body {
-    font-family: 'Roboto', sans-serif;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     background-color: var(--bg);
     margin: 0;
-    padding-bottom: 30px;
+    padding-bottom: 40px;
     color: #333;
 }
 
-/* HEADER */
 header {
     background-color: var(--primary);
     color: white;
@@ -25,133 +24,82 @@ header {
     position: sticky;
     top: 0;
     z-index: 100;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 
 .btn-icon-header {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 24px;
-    margin-right: 15px;
-    cursor: pointer;
+    background: none; border: none; color: white; font-size: 24px; margin-right: 15px; cursor: pointer;
 }
-
 h1 { margin: 0; font-size: 1.2rem; flex-grow: 1; text-align: center; }
 
-/* NAVEGAÇÃO ENTRE TELAS */
-.tela { display: none; padding: 15px; animation: fadeIn 0.3s; }
+/* LAYOUT GERAL */
+.tela { display: none; padding: 15px; animation: slideUp 0.3s; }
 .tela.ativa { display: block; }
+@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.hidden { display: none !important; }
 
-/* MENU PRINCIPAL */
+/* MENU */
 .menu-grid { display: flex; flex-direction: column; gap: 15px; }
-
 .card-menu {
-    border: none;
-    border-radius: 12px;
-    padding: 25px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    color: white;
-    font-size: 1.1rem;
-    cursor: pointer;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    transition: transform 0.1s;
+    border: none; border-radius: 10px; padding: 30px;
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    color: white; font-size: 1.2rem; cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
-.card-menu:active { transform: scale(0.98); }
-
 .principal { background: linear-gradient(135deg, #27ae60, #2ecc71); }
-.secundaria { background: linear-gradient(135deg, #2c3e50, #34495e); }
+.secundaria { background: linear-gradient(135deg, #34495e, #5dade2); }
+.big-icon { font-size: 40px !important; }
 
-.big-icon { font-size: 48px !important; }
-
-/* CARTÃO DE INFO */
-.card-info {
-    background: white;
-    border-radius: 12px;
-    padding: 15px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+/* AREA DE BUSCA MANUAL */
+.card-busca {
+    background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 15px;
 }
-.card-info ul { list-style: none; padding: 0; margin: 0; }
-.card-info li { padding: 8px 0; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
+.input-row { display: flex; gap: 10px; margin-bottom: 10px; }
+.btn-mini { 
+    width: 60px; border: none; border-radius: 8px; cursor: pointer; 
+    display: flex; align-items: center; justify-content: center; color: white;
+}
+.azul { background-color: var(--accent); }
+
+.divider { text-align: center; color: #999; font-size: 0.8rem; margin: 10px 0; font-weight: bold; }
+
+.btn-secondary {
+    width: 100%; padding: 12px; background: white; border: 2px solid var(--accent); color: var(--accent);
+    border-radius: 8px; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px;
+}
 
 /* FORMULÁRIOS */
-.form-container {
-    background: white;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-}
+.form-container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+.produto-header { border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 10px; }
+.destaque-saldo { font-size: 1.3rem; font-weight: bold; color: var(--accent); margin: 10px 0; }
 
 input, select {
-    width: 100%;
-    padding: 12px;
-    margin: 5px 0 15px 0;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    box-sizing: border-box;
-    font-size: 16px;
+    width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 16px; margin-bottom: 15px;
 }
+.input-big { font-size: 1.3rem; padding: 15px; border: 2px solid #ddd; }
+.input-big:focus { border-color: var(--primary); outline: none; }
 
-.input-row { display: flex; gap: 10px; }
-.btn-mini { width: 50px; background: #eee; border: none; border-radius: 8px; }
-
-.input-big {
-    font-size: 1.2rem;
-    padding: 15px;
-    border: 2px solid var(--primary);
-}
-
-/* BOTÕES DE AÇÃO */
-.btn-action {
-    width: 100%;
-    padding: 15px;
-    background-color: var(--saida); /* Padrão Saída */
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 1.1rem;
-    font-weight: bold;
-    margin-top: 10px;
-}
-.verde { background-color: var(--primary); }
-
-.btn-text {
-    background: none; border: none; color: #666; width: 100%; padding: 15px; text-decoration: underline;
-}
-
-/* SWITCH ENTRADA/SAIDA */
-.switch-tipo { display: flex; margin-bottom: 15px; }
+/* SWITCH TIPO */
+.switch-tipo { display: flex; margin-bottom: 15px; border-radius: 8px; overflow: hidden; }
 .switch-tipo input { display: none; }
 .switch-tipo label {
-    flex: 1;
-    padding: 15px;
-    text-align: center;
-    background: #e0e0e0;
-    border: 1px solid #ccc;
-    cursor: pointer;
-    font-weight: bold;
-    color: #555;
+    flex: 1; padding: 15px; text-align: center; background: #e0e0e0; cursor: pointer; font-weight: bold; color: #777; transition: 0.2s;
 }
 #tipo-saida:checked + label { background: var(--saida); color: white; }
 #tipo-entrada:checked + label { background: var(--primary); color: white; }
 
-/* SCANNER */
-.scanner-box {
-    background: black;
-    border-radius: 12px;
-    overflow: hidden;
-    margin-bottom: 15px;
-    position: relative;
-}
-.instrucao {
-    color: white; text-align: center; padding: 5px; margin: 0; font-size: 0.9rem;
-}
+/* BOTÕES DE AÇÃO */
+.btn-action { width: 100%; padding: 18px; color: white; border: none; border-radius: 8px; font-size: 1.2rem; font-weight: bold; cursor: pointer; }
+.verde { background-color: var(--primary); }
+.btn-text { background: none; border: none; color: #777; width: 100%; padding: 15px; text-decoration: underline; margin-top: 10px; }
 
-.hidden { display: none !important; }
-.destaque-saldo { font-size: 1.2rem; font-weight: bold; color: var(--accent); }
+/* CAMERA */
+.scanner-box { background: black; border-radius: 10px; overflow: hidden; margin-bottom: 15px; text-align: center; position: relative; }
+.btn-mini-danger {
+    position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+    background: rgba(255,0,0,0.8); color: white; border: none; padding: 8px 15px; border-radius: 20px; z-index: 10;
+}
+.instrucao { color: white; margin: 0; padding: 5px; font-size: 0.8rem; }
+.card-info ul { list-style: none; padding: 0; font-size: 0.9rem; }
+.card-info li { padding: 8px 0; border-bottom: 1px solid #eee; }
