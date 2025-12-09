@@ -34,6 +34,7 @@ const els = {
     // Campos Movimentação
     movNome: document.getElementById('mov-nome-produto'),
     movSaldo: document.getElementById('mov-saldo-atual'),
+    movCodigo: document.getElementById('mov-codigo-produto'),
     movQtd: document.getElementById('mov-qtd'),
     movDestino: document.getElementById('mov-destino'),
     btnConfirmarMov: document.getElementById('btn-confirmar-mov'),
@@ -60,7 +61,7 @@ window.onload = () => {
 
 // --- NAVEGAÇÃO ---
 function navegar(destino) {
-    // Esconde todas
+    // Esconde todas as telas
     document.querySelectorAll('.tela').forEach(t => t.classList.remove('ativa'));
     els.btnHome.style.display = 'block';
     
@@ -91,7 +92,7 @@ function navegar(destino) {
 els.btnHome.addEventListener('click', () => navegar('home'));
 
 // =======================================================
-// --- LÓGICA DE GESTÃO (NOVO) ---
+// --- LÓGICA DE GESTÃO (LISTAR / EDITAR / EXCLUIR) ---
 // =======================================================
 
 async function carregarListaGestao(filtro = '') {
@@ -99,8 +100,9 @@ async function carregarListaGestao(filtro = '') {
     
     let query = supabase.from('produtos').select('*').order('nome');
 
+    // Correção: Limpa o filtro antes de buscar
     if (filtro) {
-        query = query.ilike('nome', `%${filtro}%`);
+        query = query.ilike('nome', `%${filtro.trim()}%`);
     }
 
     const { data, error } = await query;
@@ -138,13 +140,12 @@ els.btnBuscaGestao.addEventListener('click', () => {
 
 // Ação de Excluir
 window.excluirProduto = async (id) => {
-    if(!confirm("Tem certeza que deseja excluir? Isso não apagará o histórico de movimentações, mas removerá o produto da lista.")) return;
+    if(!confirm("Tem certeza? Isso removerá o produto da lista de opções.")) return;
 
     const { error } = await supabase.from('produtos').delete().eq('id', id);
 
     if (error) {
-        // Se houver restrição de chave estrangeira (histórico), o Supabase pode bloquear.
-        alert("Erro: Talvez este produto tenha movimentações registradas e não possa ser excluído completamente.");
+        alert("Erro: Este produto já possui movimentações registradas e não pode ser apagado por segurança.");
     } else {
         alert("Produto excluído.");
         carregarListaGestao();
@@ -168,7 +169,7 @@ window.prepararEdicao = async (id) => {
 };
 
 // =======================================================
-// --- LÓGICA DE CADASTRO / SALVAR (ATUALIZADA) ---
+// --- LÓGICA DE CADASTRO (SALVAR) ---
 // =======================================================
 
 function resetarFormCadastro() {
@@ -181,8 +182,9 @@ function resetarFormCadastro() {
 }
 
 els.btnSalvarNovo.addEventListener('click', async () => {
-    const cod = els.cadCodigo.value;
-    const nome = els.cadNome.value;
+    // CORREÇÃO: .trim() remove os espaços invisíveis do leitor
+    const cod = els.cadCodigo.value.trim();
+    const nome = els.cadNome.value.trim();
     const unid = els.cadUnidade.value;
 
     if (!nome) return alert("Nome é obrigatório.");
@@ -196,15 +198,14 @@ els.btnSalvarNovo.addEventListener('click', async () => {
     let erro = null;
 
     if (produtoEmEdicaoId) {
-        // UPDATE
+        // UPDATE (Edição)
         const { error } = await supabase
             .from('produtos')
             .update(dados)
             .eq('id', produtoEmEdicaoId);
         erro = error;
     } else {
-        // INSERT
-        // Define saldo inicial 0 para novos
+        // INSERT (Novo)
         dados.quantidade_atual = 0;
         const { error } = await supabase
             .from('produtos')
@@ -214,14 +215,14 @@ els.btnSalvarNovo.addEventListener('click', async () => {
 
     if (!erro) {
         alert(produtoEmEdicaoId ? "Produto atualizado!" : "Produto cadastrado!");
-        // Se veio da gestão, volta pra gestão. Se não, vai pro menu.
+        // Se veio da gestão, volta pra gestão
         if(produtoEmEdicaoId) {
             navegar('gestao');
         } else {
             navegar('home');
         }
     } else {
-        alert("Erro ao salvar. Verifique se o código já existe.");
+        alert("Erro ao salvar. Verifique se o código de barras já existe em outro produto.");
         console.error(erro);
     }
 });
@@ -240,7 +241,7 @@ function pararScannerCadastro() {
 }
 
 // =======================================================
-// --- LÓGICA DE MOVIMENTAÇÃO (MANTIDA) ---
+// --- LÓGICA DE MOVIMENTAÇÃO (BUSCA / ENTRADA / SAIDA) ---
 // =======================================================
 
 function resetarMovimentacao() {
@@ -253,7 +254,7 @@ function resetarMovimentacao() {
 }
 
 els.btnBuscarMov.addEventListener('click', () => {
-    const termo = els.inputBuscaMov.value.trim();
+    const termo = els.inputBuscaMov.value;
     if(termo) buscarProdutoMov(termo);
 });
 
@@ -270,25 +271,42 @@ function pararScannerMovimentacao() {
     els.areaScannerMov.classList.add('hidden');
 }
 
-async function buscarProdutoMov(termo) {
-    let { data } = await supabase.from('produtos').select('*').eq('codigo_barras', termo).single();
-    
+// Lógica Principal de Busca (CORRIGIDA)
+async function buscarProdutoMov(termoOriginal) {
+    // CORREÇÃO: Limpa espaços extras antes de buscar
+    const termo = termoOriginal.trim();
+
+    // 1. Busca por CÓDIGO Exato
+    let { data } = await supabase
+        .from('produtos')
+        .select('*')
+        .eq('codigo_barras', termo)
+        .maybeSingle();
+
+    // 2. Se não achou, busca por NOME (Contém)
     if (!data) {
-        const { data: list } = await supabase.from('produtos').select('*').ilike('nome', `%${termo}%`).limit(1);
+        const { data: list } = await supabase
+            .from('produtos')
+            .select('*')
+            .ilike('nome', `%${termo}%`)
+            .limit(1);
         if (list && list.length > 0) data = list[0];
     }
 
     if (data) {
         produtoSelecionado = data;
+        
+        // Atualiza a tela
         document.getElementById('busca-manual-container').classList.add('hidden');
-        els.areaScannerMov.classList.add('hidden'); // garante que fecha scan
+        els.areaScannerMov.classList.add('hidden');
         els.formMov.classList.remove('hidden');
         
         els.movNome.innerText = data.nome;
+        els.movCodigo.innerText = `Cód: ${data.codigo_barras || 'Manual'}`;
         els.movSaldo.innerText = `Saldo: ${data.quantidade_atual} ${data.unidade}`;
         atualizarEstiloBotaoMov();
     } else {
-        alert("Produto não encontrado.");
+        alert(`Produto não encontrado para: "${termo}".\nVerifique se o código está cadastrado corretamente.`);
     }
 }
 
@@ -301,33 +319,44 @@ els.btnConfirmarMov.addEventListener('click', async () => {
     if (!qtd || qtd <= 0) return alert("Quantidade inválida.");
     
     let novoSaldo = parseFloat(produtoSelecionado.quantidade_atual);
+    
     if (tipo === 'SAIDA') {
-        if (qtd > novoSaldo) return alert("Saldo insuficiente.");
+        if (qtd > novoSaldo) return alert("Saldo insuficiente no estoque.");
         novoSaldo -= qtd;
     } else {
         novoSaldo += qtd;
     }
 
+    // Registra Histórico
     const { error: e1 } = await supabase.from('movimentacoes').insert({
-        produto_id: produtoSelecionado.id, tipo, quantidade: qtd, destino_id: (tipo === 'SAIDA' ? destino : null)
+        produto_id: produtoSelecionado.id,
+        tipo: tipo,
+        quantidade: qtd,
+        destino_id: (tipo === 'SAIDA' ? destino : null)
     });
-    const { error: e2 } = await supabase.from('produtos').update({ quantidade_atual: novoSaldo }).eq('id', produtoSelecionado.id);
+
+    // Atualiza Saldo
+    const { error: e2 } = await supabase.from('produtos')
+        .update({ quantidade_atual: novoSaldo })
+        .eq('id', produtoSelecionado.id);
 
     if (!e1 && !e2) {
-        alert("Movimentação registrada!");
+        alert("Sucesso! Movimentação registrada.");
         navegar('home');
     } else {
-        alert("Erro ao salvar.");
+        alert("Erro ao salvar dados.");
     }
 });
 
-// Estilo botão Entrada/Saida
+// Estilo botão Entrada/Saida (Visual)
 document.querySelectorAll('input[name="tipo_mov"]').forEach(r => {
     r.addEventListener('change', atualizarEstiloBotaoMov);
 });
+
 function atualizarEstiloBotaoMov() {
     const tipo = document.querySelector('input[name="tipo_mov"]:checked').value;
     const boxDestino = document.getElementById('box-destino');
+    
     if (tipo === 'ENTRADA') {
         boxDestino.style.display = 'none';
         els.btnConfirmarMov.innerText = "CONFIRMAR ENTRADA";
@@ -346,8 +375,17 @@ function atualizarEstiloBotaoMov() {
 function iniciarScanner(elemId, callback) {
     if (scannerAtivo) scannerAtivo.clear();
     scannerAtivo = new Html5Qrcode(elemId);
-    scannerAtivo.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, callback)
-        .catch(err => alert("Erro na câmera: " + err));
+    
+    // Configurações para mobile (câmera traseira)
+    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+    
+    scannerAtivo.start({ facingMode: "environment" }, config, (decodedText) => {
+        // Sucesso na leitura
+        callback(decodedText);
+    }).catch(err => {
+        alert("Erro ao abrir câmera. Verifique permissões ou use HTTPS.");
+        console.error(err);
+    });
 }
 
 function pararScanner() {
@@ -363,6 +401,7 @@ async function carregarDestinos() {
 }
 
 async function atualizarResumo() {
+    // Busca as últimas 4 movimentações para exibir na Home
     const { data } = await supabase.from('movimentacoes')
         .select(`tipo, quantidade, produtos (nome, unidade)`)
         .order('criado_em', { ascending: false }).limit(4);
@@ -371,7 +410,11 @@ async function atualizarResumo() {
         els.listaResumo.innerHTML = data.map(m => {
             const cor = m.tipo === 'ENTRADA' ? 'green' : 'orange';
             const sinal = m.tipo === 'ENTRADA' ? '+' : '-';
-            return `<li><span>${m.produtos.nome}</span><strong style="color:${cor}">${sinal}${m.quantidade} ${m.produtos.unidade}</strong></li>`;
+            return `
+                <li>
+                    <span>${m.produtos.nome}</span>
+                    <strong style="color:${cor}">${sinal}${m.quantidade} ${m.produtos.unidade}</strong>
+                </li>`;
         }).join('');
     }
 }
