@@ -3,12 +3,16 @@ const SUPABASE_URL = 'https://fdgxueegvlcyopolswpw.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZkZ3h1ZWVndmxjeW9wb2xzd3B3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNjUzMzYsImV4cCI6MjA4MDg0MTMzNn0.uWVZfcJ_95IDennMWHpnk2JiGrcun3DnKQPEEC_rYos';
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// =======================================================
 // --- VARIÁVEIS GLOBAIS ---
+// =======================================================
 let scannerAtivo = null;
 let produtoSelecionado = null; // Para movimentação
 let produtoEmEdicaoId = null;  // Para saber se é novo cadastro ou edição
 
-// --- ELEMENTOS DOM ---
+// =======================================================
+// --- ELEMENTOS DO HTML (DOM) ---
+// =======================================================
 const els = {
     btnHome: document.getElementById('btn-home'),
     titulo: document.getElementById('titulo-pagina'),
@@ -19,27 +23,29 @@ const els = {
     telaGestao: document.getElementById('tela-gestao'),
     telaCad: document.getElementById('tela-cadastro'),
 
-    // Gestão
+    // Tela de Gestão
     listaGestao: document.getElementById('lista-gestao-produtos'),
     inputBuscaGestao: document.getElementById('input-busca-gestao'),
     btnBuscaGestao: document.getElementById('btn-busca-gestao'),
 
-    // Movimentação
+    // Tela de Movimentação
     inputBuscaMov: document.getElementById('input-busca-manual'),
     btnBuscarMov: document.getElementById('btn-buscar-manual'),
     btnAtivarScanner: document.getElementById('btn-ativar-scanner'),
     areaScannerMov: document.getElementById('area-scanner-mov'),
     formMov: document.getElementById('form-movimentacao'),
+    containerBuscaManual: document.getElementById('busca-manual-container'),
     
-    // Campos Movimentação
+    // Campos do Formulário de Movimentação
     movNome: document.getElementById('mov-nome-produto'),
     movSaldo: document.getElementById('mov-saldo-atual'),
     movCodigo: document.getElementById('mov-codigo-produto'),
     movQtd: document.getElementById('mov-qtd'),
     movDestino: document.getElementById('mov-destino'),
     btnConfirmarMov: document.getElementById('btn-confirmar-mov'),
+    boxDestino: document.getElementById('box-destino'),
 
-    // Cadastro / Edição
+    // Tela de Cadastro / Edição
     tituloCadastro: document.getElementById('titulo-cadastro'),
     cadId: document.getElementById('cad-id-editar'),
     cadCodigo: document.getElementById('cad-codigo'),
@@ -49,23 +55,27 @@ const els = {
     btnScanCad: document.getElementById('btn-scan-cad'),
     areaScannerCad: document.getElementById('reader-cad-container'),
 
-    // Resumo
+    // Resumo na Home
     listaResumo: document.getElementById('lista-resumo')
 };
 
+// =======================================================
 // --- INICIALIZAÇÃO ---
+// =======================================================
 window.onload = () => {
     carregarDestinos();
     atualizarResumo();
 };
 
-// --- NAVEGAÇÃO ---
+// =======================================================
+// --- NAVEGAÇÃO ENTRE TELAS ---
+// =======================================================
 function navegar(destino) {
     // Esconde todas as telas
     document.querySelectorAll('.tela').forEach(t => t.classList.remove('ativa'));
     els.btnHome.style.display = 'block';
     
-    // Ações específicas de cada tela
+    // Lógica para cada tela
     if (destino === 'home') {
         els.telaMenu.classList.add('ativa');
         els.titulo.innerText = 'Menu Principal';
@@ -81,11 +91,11 @@ function navegar(destino) {
     else if (destino === 'gestao') {
         els.telaGestao.classList.add('ativa');
         els.titulo.innerText = 'Gerenciar Produtos';
-        carregarListaGestao(); // Carrega a lista ao abrir
+        carregarListaGestao();
     }
     else if (destino === 'cadastro') {
         els.telaCad.classList.add('ativa');
-        resetarFormCadastro(); // Limpa para novo cadastro
+        resetarFormCadastro();
     }
 }
 
@@ -100,8 +110,8 @@ async function carregarListaGestao(filtro = '') {
     
     let query = supabase.from('produtos').select('*').order('nome');
 
-    // Correção: Limpa o filtro antes de buscar
     if (filtro) {
+        // .trim() evita buscar espaços vazios
         query = query.ilike('nome', `%${filtro.trim()}%`);
     }
 
@@ -109,7 +119,7 @@ async function carregarListaGestao(filtro = '') {
 
     if (error) return alert("Erro ao carregar itens.");
     
-    if (data.length === 0) {
+    if (!data || data.length === 0) {
         els.listaGestao.innerHTML = '<p style="text-align:center">Nenhum produto encontrado.</p>';
         return;
     }
@@ -133,26 +143,21 @@ async function carregarListaGestao(filtro = '') {
     `).join('');
 }
 
-// Busca na tela de gestão
 els.btnBuscaGestao.addEventListener('click', () => {
     carregarListaGestao(els.inputBuscaGestao.value);
 });
 
-// Ação de Excluir
 window.excluirProduto = async (id) => {
-    if(!confirm("Tem certeza? Isso removerá o produto da lista de opções.")) return;
-
+    if(!confirm("Tem certeza? Isso removerá o produto da lista.")) return;
     const { error } = await supabase.from('produtos').delete().eq('id', id);
-
     if (error) {
-        alert("Erro: Este produto já possui movimentações registradas e não pode ser apagado por segurança.");
+        alert("Erro: Este produto possui histórico de movimentação e não pode ser excluído.");
     } else {
         alert("Produto excluído.");
         carregarListaGestao();
     }
 };
 
-// Ação de Editar (Leva para tela de cadastro preenchida)
 window.prepararEdicao = async (id) => {
     const { data } = await supabase.from('produtos').select('*').eq('id', id).single();
     if(data) {
@@ -161,7 +166,7 @@ window.prepararEdicao = async (id) => {
         els.titulo.innerText = 'Editar Produto';
         els.tituloCadastro.innerText = 'Editando: ' + data.nome;
 
-        produtoEmEdicaoId = data.id; // Marca que é edição
+        produtoEmEdicaoId = data.id;
         els.cadCodigo.value = data.codigo_barras || '';
         els.cadNome.value = data.nome;
         els.cadUnidade.value = data.unidade;
@@ -173,7 +178,7 @@ window.prepararEdicao = async (id) => {
 // =======================================================
 
 function resetarFormCadastro() {
-    produtoEmEdicaoId = null; // Reseta para modo "Novo"
+    produtoEmEdicaoId = null;
     els.titulo.innerText = 'Novo Cadastro';
     els.tituloCadastro.innerText = 'Cadastrar Novo Item';
     els.cadCodigo.value = '';
@@ -182,47 +187,31 @@ function resetarFormCadastro() {
 }
 
 els.btnSalvarNovo.addEventListener('click', async () => {
-    // CORREÇÃO: .trim() remove os espaços invisíveis do leitor
+    // .trim() remove espaços antes e depois (Correção Scanner)
     const cod = els.cadCodigo.value.trim();
     const nome = els.cadNome.value.trim();
     const unid = els.cadUnidade.value;
 
     if (!nome) return alert("Nome é obrigatório.");
 
-    const dados = {
-        codigo_barras: cod,
-        nome: nome,
-        unidade: unid
-    };
-
+    const dados = { codigo_barras: cod, nome: nome, unidade: unid };
     let erro = null;
 
     if (produtoEmEdicaoId) {
-        // UPDATE (Edição)
-        const { error } = await supabase
-            .from('produtos')
-            .update(dados)
-            .eq('id', produtoEmEdicaoId);
+        const { error } = await supabase.from('produtos').update(dados).eq('id', produtoEmEdicaoId);
         erro = error;
     } else {
-        // INSERT (Novo)
         dados.quantidade_atual = 0;
-        const { error } = await supabase
-            .from('produtos')
-            .insert(dados);
+        const { error } = await supabase.from('produtos').insert(dados);
         erro = error;
     }
 
     if (!erro) {
-        alert(produtoEmEdicaoId ? "Produto atualizado!" : "Produto cadastrado!");
-        // Se veio da gestão, volta pra gestão
-        if(produtoEmEdicaoId) {
-            navegar('gestao');
-        } else {
-            navegar('home');
-        }
+        alert(produtoEmEdicaoId ? "Atualizado com sucesso!" : "Cadastrado com sucesso!");
+        if(produtoEmEdicaoId) navegar('gestao');
+        else navegar('home');
     } else {
-        alert("Erro ao salvar. Verifique se o código de barras já existe em outro produto.");
+        alert("Erro ao salvar. Verifique se o código já existe.");
         console.error(erro);
     }
 });
@@ -245,7 +234,7 @@ function pararScannerCadastro() {
 // =======================================================
 
 function resetarMovimentacao() {
-    document.getElementById('busca-manual-container').classList.remove('hidden');
+    els.containerBuscaManual.classList.remove('hidden');
     els.formMov.classList.add('hidden');
     els.areaScannerMov.classList.add('hidden');
     els.inputBuscaMov.value = '';
@@ -271,19 +260,18 @@ function pararScannerMovimentacao() {
     els.areaScannerMov.classList.add('hidden');
 }
 
-// Lógica Principal de Busca (CORRIGIDA)
 async function buscarProdutoMov(termoOriginal) {
-    // CORREÇÃO: Limpa espaços extras antes de buscar
+    // .trim() para limpar espaços do scanner
     const termo = termoOriginal.trim();
 
-    // 1. Busca por CÓDIGO Exato
+    // 1. Busca Exata (Código)
     let { data } = await supabase
         .from('produtos')
         .select('*')
         .eq('codigo_barras', termo)
         .maybeSingle();
 
-    // 2. Se não achou, busca por NOME (Contém)
+    // 2. Busca Aproximada (Nome)
     if (!data) {
         const { data: list } = await supabase
             .from('produtos')
@@ -296,8 +284,7 @@ async function buscarProdutoMov(termoOriginal) {
     if (data) {
         produtoSelecionado = data;
         
-        // Atualiza a tela
-        document.getElementById('busca-manual-container').classList.add('hidden');
+        els.containerBuscaManual.classList.add('hidden');
         els.areaScannerMov.classList.add('hidden');
         els.formMov.classList.remove('hidden');
         
@@ -306,11 +293,11 @@ async function buscarProdutoMov(termoOriginal) {
         els.movSaldo.innerText = `Saldo: ${data.quantidade_atual} ${data.unidade}`;
         atualizarEstiloBotaoMov();
     } else {
-        alert(`Produto não encontrado para: "${termo}".\nVerifique se o código está cadastrado corretamente.`);
+        alert(`Produto não encontrado: "${termo}".\nVerifique se o código está correto.`);
     }
 }
 
-// Botão Confirmar Movimentação
+// Lógica de Movimentação (Transação)
 els.btnConfirmarMov.addEventListener('click', async () => {
     const tipo = document.querySelector('input[name="tipo_mov"]:checked').value;
     const qtd = parseFloat(els.movQtd.value);
@@ -319,15 +306,13 @@ els.btnConfirmarMov.addEventListener('click', async () => {
     if (!qtd || qtd <= 0) return alert("Quantidade inválida.");
     
     let novoSaldo = parseFloat(produtoSelecionado.quantidade_atual);
-    
     if (tipo === 'SAIDA') {
-        if (qtd > novoSaldo) return alert("Saldo insuficiente no estoque.");
+        if (qtd > novoSaldo) return alert("Saldo insuficiente.");
         novoSaldo -= qtd;
     } else {
         novoSaldo += qtd;
     }
 
-    // Registra Histórico
     const { error: e1 } = await supabase.from('movimentacoes').insert({
         produto_id: produtoSelecionado.id,
         tipo: tipo,
@@ -335,55 +320,76 @@ els.btnConfirmarMov.addEventListener('click', async () => {
         destino_id: (tipo === 'SAIDA' ? destino : null)
     });
 
-    // Atualiza Saldo
     const { error: e2 } = await supabase.from('produtos')
         .update({ quantidade_atual: novoSaldo })
         .eq('id', produtoSelecionado.id);
 
     if (!e1 && !e2) {
-        alert("Sucesso! Movimentação registrada.");
+        alert("Movimentação registrada com sucesso!");
         navegar('home');
     } else {
         alert("Erro ao salvar dados.");
     }
 });
 
-// Estilo botão Entrada/Saida (Visual)
+// Atualização visual dos botões Entrada/Saída
 document.querySelectorAll('input[name="tipo_mov"]').forEach(r => {
     r.addEventListener('change', atualizarEstiloBotaoMov);
 });
 
 function atualizarEstiloBotaoMov() {
     const tipo = document.querySelector('input[name="tipo_mov"]:checked').value;
-    const boxDestino = document.getElementById('box-destino');
-    
     if (tipo === 'ENTRADA') {
-        boxDestino.style.display = 'none';
+        els.boxDestino.style.display = 'none';
         els.btnConfirmarMov.innerText = "CONFIRMAR ENTRADA";
         els.btnConfirmarMov.style.backgroundColor = "var(--primary)";
     } else {
-        boxDestino.style.display = 'block';
+        els.boxDestino.style.display = 'block';
         els.btnConfirmarMov.innerText = "CONFIRMAR SAÍDA";
         els.btnConfirmarMov.style.backgroundColor = "var(--saida)";
     }
 }
 
 // =======================================================
-// --- UTILITÁRIOS GERAIS ---
+// --- FUNÇÃO DE SCANNER (OTIMIZADA PARA CÓDIGO DE BARRAS) ---
 // =======================================================
-
 function iniciarScanner(elemId, callback) {
-    if (scannerAtivo) scannerAtivo.clear();
+    if (scannerAtivo) {
+        scannerAtivo.clear().catch(err => console.error("Scanner clear error", err));
+    }
+
     scannerAtivo = new Html5Qrcode(elemId);
     
-    // Configurações para mobile (câmera traseira)
-    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+    // Configura os formatos de barra mais comuns
+    const formatos = [
+        Html5QrcodeSupportedFormats.QR_CODE,
+        Html5QrcodeSupportedFormats.EAN_13,
+        Html5QrcodeSupportedFormats.EAN_8,
+        Html5QrcodeSupportedFormats.CODE_128,
+        Html5QrcodeSupportedFormats.CODE_39
+    ];
+
+    const config = { 
+        fps: 10, 
+        // Caixa retangular (larga) para encaixar o código de barras
+        qrbox: { width: 300, height: 150 },
+        aspectRatio: 1.0,
+        formatsToSupport: formatos,
+        // Tenta usar o detector nativo do Android (Muito mais rápido)
+        experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true
+        }
+    };
     
-    scannerAtivo.start({ facingMode: "environment" }, config, (decodedText) => {
-        // Sucesso na leitura
-        callback(decodedText);
-    }).catch(err => {
-        alert("Erro ao abrir câmera. Verifique permissões ou use HTTPS.");
+    scannerAtivo.start(
+        { facingMode: "environment" }, 
+        config, 
+        (decodedText) => {
+            // Sucesso
+            callback(decodedText);
+        }
+    ).catch(err => {
+        alert("Erro na câmera. Tente afastar o celular para focar melhor.");
         console.error(err);
     });
 }
@@ -395,13 +401,15 @@ function pararScanner() {
     }
 }
 
+// =======================================================
+// --- UTILITÁRIOS GERAIS ---
+// =======================================================
 async function carregarDestinos() {
     const { data } = await supabase.from('destinos').select('*');
     if (data) els.movDestino.innerHTML = data.map(d => `<option value="${d.id}">${d.nome}</option>`).join('');
 }
 
 async function atualizarResumo() {
-    // Busca as últimas 4 movimentações para exibir na Home
     const { data } = await supabase.from('movimentacoes')
         .select(`tipo, quantidade, produtos (nome, unidade)`)
         .order('criado_em', { ascending: false }).limit(4);
@@ -410,11 +418,7 @@ async function atualizarResumo() {
         els.listaResumo.innerHTML = data.map(m => {
             const cor = m.tipo === 'ENTRADA' ? 'green' : 'orange';
             const sinal = m.tipo === 'ENTRADA' ? '+' : '-';
-            return `
-                <li>
-                    <span>${m.produtos.nome}</span>
-                    <strong style="color:${cor}">${sinal}${m.quantidade} ${m.produtos.unidade}</strong>
-                </li>`;
+            return `<li><span>${m.produtos.nome}</span><strong style="color:${cor}">${sinal}${m.quantidade} ${m.produtos.unidade}</strong></li>`;
         }).join('');
     }
 }
