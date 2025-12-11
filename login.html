@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Estoque Agricultura</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #27ae60, #145a32);
+            margin: 0;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+        }
+        .login-card {
+            background: white;
+            padding: 40px 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            width: 90%;
+            max-width: 350px;
+            text-align: center;
+        }
+        
+        .logo-login-img {
+            max-width: 150px;
+            height: auto;
+            margin-bottom: 20px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        h2 { margin: 10px 0 5px 0; color: #333; }
+        p { color: #666; margin-bottom: 25px; }
+        
+        .input-group { text-align: left; margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; color: #444; }
+        
+        /* ESTILO DO CAMPO DE SENHA COM OLHO */
+        .password-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px;
+            padding-right: 40px; /* Espaço para o olho não ficar em cima do texto */
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        /* O ÍCONE DO OLHO */
+        .icon-eye {
+            position: absolute;
+            right: 10px;
+            color: #777;
+            cursor: pointer;
+            user-select: none; /* Impede selecionar o ícone como texto */
+        }
+        
+        .btn-login {
+            margin-top: 20px;
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            padding: 15px;
+            width: 100%;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .btn-login:hover { background-color: #219150; }
+        .btn-login:disabled { background-color: #ccc; cursor: not-allowed; }
+        
+        .error-msg {
+            color: #c0392b;
+            background: #fadbd8;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 15px;
+            display: none;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="login-card">
+        <img src="logo.png" alt="Agricultura Camaquã" class="logo-login-img">
+        
+        <h2>Acesso Restrito</h2>
+        <p>Controle de Estoque e Frota</p>
+        
+        <div class="input-group">
+            <label>E-mail:</label>
+            <input type="email" id="email" placeholder="admin@camaqua.rs.gov.br">
+        </div>
+        
+        <div class="input-group">
+            <label>Senha:</label>
+            <div class="password-container">
+                <input type="password" id="password" placeholder="Sua senha">
+                <span class="material-icons icon-eye" onclick="toggleSenha()" id="olho">visibility</span>
+            </div>
+        </div>
+
+        <button onclick="fazerLogin()" class="btn-login" id="btn-entrar">ENTRAR</button>
+        <div id="msg-erro" class="error-msg"></div>
+    </div>
+
+    <script>
+        // --- CONFIGURAÇÃO SUPABASE ---
+        // Substitua pelas suas chaves reais
+        const SUPABASE_URL = 'https://fdgxueegvlcyopolswpw.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZkZ3h1ZWVndmxjeW9wb2xzd3B3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNjUzMzYsImV4cCI6MjA4MDg0MTMzNn0.uWVZfcJ_95IDennMWHpnk2JiGrcun3DnKQPEEC_rYos';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // --- FUNÇÃO MOSTRAR/OCULTAR SENHA ---
+        function toggleSenha() {
+            const inputSenha = document.getElementById('password');
+            const icone = document.getElementById('olho');
+
+            if (inputSenha.type === 'password') {
+                inputSenha.type = 'text'; // Vira texto visível
+                icone.innerText = 'visibility_off'; // Muda ícone para olho riscado
+            } else {
+                inputSenha.type = 'password'; // Vira bolinhas
+                icone.innerText = 'visibility'; // Muda ícone para olho normal
+            }
+        }
+
+        // --- FUNÇÃO DE LOGIN ---
+        async function fazerLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('btn-entrar');
+            const msg = document.getElementById('msg-erro');
+
+            if (!email || !password) {
+                msg.style.display = 'block';
+                msg.innerText = "Preencha e-mail e senha.";
+                return;
+            }
+
+            btn.innerText = "Verificando...";
+            btn.disabled = true;
+            msg.style.display = 'none';
+
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email: email,
+                password: password,
+            });
+
+            if (error) {
+                btn.innerText = "ENTRAR";
+                btn.disabled = false;
+                msg.style.display = 'block';
+                msg.innerText = "Acesso negado. Verifique os dados.";
+            } else {
+                // Sucesso!
+                window.location.href = 'index.html';
+            }
+        }
+
+        // Permitir login com Enter
+        document.getElementById('password').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') fazerLogin();
+        });
+    </script>
+</body>
+</html>

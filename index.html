@@ -5,206 +5,72 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Estoque Agricultura</title>
     <link rel="stylesheet" href="style.css">
-    
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-    
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
-
     <header>
-        <button id="btn-home" class="btn-icon-header" style="display: none;">
-            <span class="material-icons">arrow_back</span>
-        </button>
+        <button id="btn-home" class="btn-icon-header" style="display: none;"><span class="material-icons">arrow_back</span></button>
+        <img src="logo.png" alt="Logo" style="height: 45px; margin-right: 10px; background:white; border-radius:50%; padding: 2px;">
         <h1 id="titulo-pagina">Menu Principal</h1>
+        <button onclick="sairDoSistema()" class="btn-icon-header" style="background:rgba(0,0,0,0.1); border-radius:50%; width:40px; height:40px; display:flex; align-items:center; justify-content:center; margin-right:0;"><span class="material-icons" style="margin:0; font-size:20px;">logout</span></button>
     </header>
-
     <main>
-        
         <section id="tela-menu" class="tela ativa">
             <div class="menu-grid">
-                
-                <button onclick="navegar('movimentacao')" class="card-menu principal">
-                    <span class="material-icons big-icon">sync_alt</span>
-                    <span>Movimentar Estoque<br><small>(Entrada / Saída)</small></span>
-                </button>
-
-                <button onclick="navegar('saldo')" class="card-menu neutra" style="background: linear-gradient(135deg, #e67e22, #d35400); color: white; border:none;">
-                    <span class="material-icons big-icon">equalizer</span>
-                    <span>Saldo de Estoque<br><small>(Visualizar Quantidades)</small></span>
-                </button>
-
-                <button onclick="navegar('relatorios')" class="card-menu secundaria" style="background: linear-gradient(135deg, #2980b9, #3498db);">
-                    <span class="material-icons big-icon">history</span>
-                    <span>Histórico de Uso<br><small>(Quem pegou o quê?)</small></span>
-                </button>
-
+                <button onclick="navegar('movimentacao')" class="card-menu principal"><span class="material-icons big-icon">sync_alt</span><span>Movimentar Estoque<br><small>(Entrada / Saída)</small></span></button>
+                <button onclick="navegar('saldo')" class="card-menu neutra" style="background: linear-gradient(135deg, #e67e22, #d35400); color: white; border:none;"><span class="material-icons big-icon">equalizer</span><span>Saldo de Estoque<br><small>(Visualizar Quantidades)</small></span></button>
+                <button onclick="navegar('relatorios')" class="card-menu secundaria" style="background: linear-gradient(135deg, #2980b9, #3498db);"><span class="material-icons big-icon">picture_as_pdf</span><span>Histórico e Relatórios<br><small>(Filtrar e Baixar PDF)</small></span></button>
                 <div class="row-botoes-pequenos">
-                    <button onclick="navegar('gestao')" class="card-menu neutra">
-                        <span class="material-icons">inventory_2</span>
-                        <span>Produtos</span>
-                    </button>
-                    <button onclick="navegar('maquinas')" class="card-menu neutra" style="border-left: 5px solid #e67e22;">
-                        <span class="material-icons">agriculture</span>
-                        <span>Máquinas</span>
-                    </button>
-                    <button onclick="navegar('cadastro')" class="card-menu neutra">
-                        <span class="material-icons">add_circle</span>
-                        <span>Novo Item</span>
-                    </button>
+                    <button onclick="navegar('gestao')" class="card-menu neutra"><span class="material-icons">inventory_2</span><span>Produtos</span></button>
+                    <button onclick="navegar('maquinas')" class="card-menu neutra" style="border-left: 5px solid #e67e22;"><span class="material-icons">agriculture</span><span>Máquinas</span></button>
+                    <button onclick="navegar('cadastro')" class="card-menu neutra"><span class="material-icons">add_circle</span><span>Novo Item</span></button>
+                    <button onclick="window.location.href='usuarios.html'" class="card-menu neutra" style="border-left: 5px solid #34495e;"><span class="material-icons">group_add</span><span>Equipe</span></button>
                 </div>
-
-                <div class="card-info">
-                    <h3>📊 Resumo Rápido</h3>
-                    <ul id="lista-resumo"><li>Carregando...</li></ul>
-                </div>
+                <div class="card-info"><h3>📊 Resumo Rápido</h3><ul id="lista-resumo"><li>Carregando...</li></ul></div>
             </div>
         </section>
 
         <section id="tela-movimentacao" class="tela">
-            <div id="busca-manual-container" class="card-busca">
-                <label>Movimentar Item:</label>
-                <div class="input-row">
-                    <input type="text" id="input-busca-manual" placeholder="Buscar por Código ou Nome">
-                    <button id="btn-buscar-manual" class="btn-mini azul"><span class="material-icons">search</span></button>
-                </div>
-                <div class="divider">OU</div>
-                <button id="btn-ativar-scanner" class="btn-secondary">
-                    <span class="material-icons">qr_code_scanner</span> Ler com a Câmera
-                </button>
-            </div>
-            <div id="area-scanner-mov" class="scanner-box hidden">
-                <div id="reader-mov"></div>
-                <button onclick="pararScannerMovimentacao()" class="btn-mini-danger">Fechar Câmera</button>
-            </div>
+            <div id="busca-manual-container" class="card-busca"><label>Movimentar Item:</label><div class="input-row"><input type="text" id="input-busca-manual" placeholder="Buscar por Código ou Nome"><button id="btn-buscar-manual" class="btn-mini azul"><span class="material-icons">search</span></button></div><div class="divider">OU</div><button id="btn-ativar-scanner" class="btn-secondary"><span class="material-icons">qr_code_scanner</span> Ler com a Câmera</button></div>
+            <div id="area-scanner-mov" class="scanner-box hidden"><div id="reader-mov"></div><button onclick="pararScannerMovimentacao()" class="btn-mini-danger">Fechar Câmera</button></div>
             <div id="form-movimentacao" class="form-container hidden">
-                <div class="produto-header">
-                    <h2 id="mov-nome-produto">...</h2>
-                    <small id="mov-codigo-produto">...</small>
-                </div>
-                <p id="mov-saldo-atual" class="destaque-saldo">...</p>
-                <input type="hidden" id="mov-id-produto">
-                <div class="switch-tipo">
-                    <input type="radio" name="tipo_mov" id="tipo-saida" value="SAIDA" checked>
-                    <label for="tipo-saida">SAÍDA (Usar)</label>
-                    <input type="radio" name="tipo_mov" id="tipo-entrada" value="ENTRADA">
-                    <label for="tipo-entrada">ENTRADA (Repor)</label>
-                </div>
-                <label>Quantidade:</label>
-                <input type="number" id="mov-qtd" placeholder="0" class="input-big" inputmode="decimal">
-                <div id="box-destino">
-                    <label>Destino / Setor:</label>
-                    <select id="mov-destino" class="input-big"></select>
-                </div>
-                <div id="box-maquina" class="hidden box-alerta">
-                    <label>Qual Máquina recebeu?</label>
-                    <select id="mov-select-maquina" class="input-big"><option value="">Selecione...</option></select>
-                </div>
-                <button id="btn-confirmar-mov" class="btn-action">CONFIRMAR</button>
-                <button onclick="resetarMovimentacao()" class="btn-text">Cancelar</button>
+                <div class="produto-header"><h2 id="mov-nome-produto">...</h2><small id="mov-codigo-produto">...</small></div><p id="mov-saldo-atual" class="destaque-saldo">...</p><input type="hidden" id="mov-id-produto">
+                <div class="switch-tipo"><input type="radio" name="tipo_mov" id="tipo-saida" value="SAIDA" checked><label for="tipo-saida">SAÍDA (Usar)</label><input type="radio" name="tipo_mov" id="tipo-entrada" value="ENTRADA"><label for="tipo-entrada">ENTRADA (Repor)</label></div>
+                <label>Quantidade:</label><input type="number" id="mov-qtd" placeholder="0" class="input-big" inputmode="decimal">
+                <div id="box-destino"><label>Destino / Setor:</label><select id="mov-destino" class="input-big"></select></div>
+                <div id="box-maquina" class="hidden box-alerta"><label>Qual Máquina recebeu?</label><select id="mov-select-maquina" class="input-big"><option value="">Selecione...</option></select></div>
+                <button id="btn-confirmar-mov" class="btn-action">CONFIRMAR</button><button onclick="resetarMovimentacao()" class="btn-text">Cancelar</button>
             </div>
         </section>
 
         <section id="tela-saldo" class="tela">
-            <div class="card-busca">
-                <div class="input-row">
-                    <input type="text" id="input-busca-saldo" placeholder="Filtrar produto...">
-                    <button id="btn-busca-saldo" class="btn-mini azul"><span class="material-icons">search</span></button>
-                </div>
-            </div>
-            
-            <button id="btn-pdf-saldo" class="btn-action" style="background: #2c3e50; margin-bottom: 20px;">
-                <span class="material-icons" style="vertical-align:middle">print</span> IMPRIMIR INVENTÁRIO
-            </button>
-
-            <div class="tabela-responsiva">
-                <table id="tabela-saldo">
-                    <thead>
-                        <tr>
-                            <th>Produto</th>
-                            <th style="text-align:center">Qtd</th>
-                            <th>Unid</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
+            <div class="card-busca"><div class="input-row"><input type="text" id="input-busca-saldo" placeholder="Filtrar produto..."><button id="btn-busca-saldo" class="btn-mini azul"><span class="material-icons">search</span></button></div></div>
+            <button id="btn-pdf-saldo" class="btn-action" style="background: #2c3e50; margin-bottom: 20px;"><span class="material-icons" style="vertical-align:middle">print</span> IMPRIMIR INVENTÁRIO</button>
+            <div class="tabela-responsiva"><table id="tabela-saldo"><thead><tr><th>Produto</th><th style="text-align:center">Qtd</th><th>Unid</th></tr></thead><tbody></tbody></table></div>
+            <button class="btn-float" onclick="navegar('cadastro')"><span class="material-icons">add</span></button>
         </section>
 
         <section id="tela-relatorios" class="tela">
-            <div class="form-container">
-                <h3>🔍 Histórico de Uso</h3>
-                <label>Data Início:</label><input type="date" id="rel-data-inicio">
-                <label>Data Fim:</label><input type="date" id="rel-data-fim">
-                <label>Máquina:</label><select id="rel-maquina"><option value="">Todas</option></select>
-                <label>Destino:</label><select id="rel-destino"><option value="">Todos</option></select>
-                <button id="btn-filtrar-relatorio" class="btn-action azul">PESQUISAR</button>
-            </div>
-            <div id="container-resultados-relatorio" class="hidden">
-                <button id="btn-gerar-pdf" class="btn-action verde" style="background:#c0392b;">
-                    <span class="material-icons" style="vertical-align:middle">picture_as_pdf</span> BAIXAR PDF
-                </button>
-                <div class="tabela-responsiva">
-                    <table id="tabela-relatorio">
-                        <thead>
-                            <tr><th>Data</th><th>Produto</th><th>Tipo</th><th>Qtd</th><th>Destino</th></tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </div>
+            <div class="form-container"><h3>🔍 Histórico de Uso</h3><label>Data Início:</label><input type="date" id="rel-data-inicio"><label>Data Fim:</label><input type="date" id="rel-data-fim"><label>Máquina:</label><select id="rel-maquina"><option value="">Todas</option></select><label>Destino:</label><select id="rel-destino"><option value="">Todos</option></select><button id="btn-filtrar-relatorio" class="btn-action azul">PESQUISAR</button></div>
+            <div id="container-resultados-relatorio" class="hidden"><button id="btn-gerar-pdf" class="btn-action verde" style="background:#c0392b;"><span class="material-icons" style="vertical-align:middle">picture_as_pdf</span> BAIXAR PDF</button><div class="tabela-responsiva"><table id="tabela-relatorio"><thead><tr><th>Data</th><th>Produto</th><th>Tipo</th><th>Qtd</th><th>Destino</th></tr></thead><tbody></tbody></table></div></div>
         </section>
 
         <section id="tela-gestao" class="tela">
-            <div class="card-busca">
-                <div class="input-row">
-                    <input type="text" id="input-busca-gestao" placeholder="Buscar para editar...">
-                    <button id="btn-busca-gestao" class="btn-mini azul"><span class="material-icons">search</span></button>
-                </div>
-            </div>
-            <ul id="lista-gestao-produtos" class="lista-custom"></ul>
+            <div class="card-busca"><div class="input-row"><input type="text" id="input-busca-gestao" placeholder="Buscar para editar..."><button id="btn-busca-gestao" class="btn-mini azul"><span class="material-icons">search</span></button></div></div>
+            <ul id="lista-gestao-produtos" class="lista-custom"></ul><button class="btn-float" onclick="navegar('cadastro')"><span class="material-icons">add</span></button>
         </section>
 
         <section id="tela-cadastro" class="tela">
-            <div class="form-container">
-                <h3 id="titulo-cadastro">Novo Cadastro</h3>
-                <input type="hidden" id="cad-id-editar">
-                <label>Código:</label>
-                <div class="input-row">
-                    <input type="text" id="cad-codigo" placeholder="Scan ou Digite">
-                    <button id="btn-scan-cad" class="btn-mini"><span class="material-icons">qr_code</span></button>
-                </div>
-                <div id="reader-cad-container" class="hidden scanner-box">
-                    <div id="reader-cad"></div>
-                    <button onclick="pararScannerCadastro()" class="btn-mini-danger">Fechar</button>
-                </div>
-                <label>Nome:</label><input type="text" id="cad-nome">
-                <label>Unidade:</label>
-                <select id="cad-unidade">
-                    <option value="un">Unidade</option><option value="lt">Litros</option><option value="kg">Quilos</option>
-                    <option value="cx">Caixa</option><option value="m">Metros</option><option value="sc">Saco</option>
-                </select>
-                <button id="btn-salvar-novo" class="btn-action verde">SALVAR</button>
-            </div>
+            <div class="form-container"><h3 id="titulo-cadastro">Novo Cadastro</h3><input type="hidden" id="cad-id-editar"><label>Código:</label><div class="input-row"><input type="text" id="cad-codigo" placeholder="Scan ou Digite"><button id="btn-scan-cad" class="btn-mini"><span class="material-icons">qr_code</span></button></div><div id="reader-cad-container" class="hidden scanner-box"><div id="reader-cad"></div><button onclick="pararScannerCadastro()" class="btn-mini-danger">Fechar</button></div><label>Nome:</label><input type="text" id="cad-nome"><label>Unidade:</label><select id="cad-unidade"><option value="un">Unidade</option><option value="lt">Litros</option><option value="kg">Quilos</option><option value="cx">Caixa</option><option value="m">Metros</option><option value="sc">Saco</option></select><button id="btn-salvar-novo" class="btn-action verde">SALVAR</button></div>
         </section>
 
         <section id="tela-maquinas" class="tela">
-            <div class="form-container">
-                <h3>🚜 Frota Municipal</h3>
-                <div class="input-row">
-                    <input type="text" id="maq-nome" placeholder="Nova Máquina...">
-                    <button id="btn-add-maq" class="btn-mini verde"><span class="material-icons">add</span></button>
-                </div>
-                <hr>
-                <ul id="lista-maquinas" class="lista-custom"></ul>
-            </div>
+            <div class="form-container"><h3>🚜 Frota Municipal</h3><div class="input-row"><input type="text" id="maq-nome" placeholder="Nova Máquina..."><button id="btn-add-maq" class="btn-mini verde"><span class="material-icons">add</span></button></div><hr><ul id="lista-maquinas" class="lista-custom"></ul></div>
         </section>
-
     </main>
     <script src="script.js"></script>
 </body>

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastrar Usuário</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <header>
+        <button onclick="window.location.href='index.html'" class="btn-icon-header"><span class="material-icons">arrow_back</span></button>
+        <h1 id="titulo-pagina">Novo Usuário</h1>
+    </header>
+    <main>
+        <div class="form-container" style="max-width: 400px; margin: 40px auto; text-align: center;">
+            <img src="logo.png" alt="Logo" style="height: 60px; margin-bottom: 20px;">
+            <h3>Cadastrar Acesso</h3>
+            <p style="color: #666; font-size: 0.9rem; margin-bottom: 20px;">Preencha os dados do novo funcionário.</p>
+            <label style="text-align: left; display: block;">E-mail do Funcionário:</label>
+            <input type="email" id="novo-email" placeholder="nome@camaqua.rs.gov.br">
+            <label style="text-align: left; display: block;">Senha Provisória:</label>
+            <input type="text" id="novo-senha" value="agricultura123">
+            <button id="btn-cadastrar-user" class="btn-action verde"><span class="material-icons" style="vertical-align: middle; margin-right: 5px;">person_add</span> CRIAR USUÁRIO</button>
+            <p id="msg-feedback" style="margin-top: 15px; font-weight: bold;"></p>
+        </div>
+    </main>
+    <script>
+        const SUPABASE_URL = 'https://fdgxueegvlcyopolswpw.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZkZ3h1ZWVndmxjeW9wb2xzd3B3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNjUzMzYsImV4cCI6MjA4MDg0MTMzNn0.uWVZfcJ_95IDennMWHpnk2JiGrcun3DnKQPEEC_rYos';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        (async function verificarSessao() {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) window.location.href = 'login.html';
+        })();
+
+        const btn = document.getElementById('btn-cadastrar-user');
+        const msg = document.getElementById('msg-feedback');
+
+        btn.addEventListener('click', async () => {
+            const email = document.getElementById('novo-email').value.trim();
+            const password = document.getElementById('novo-senha').value.trim();
+            if (!email || !password) return alert("Preencha tudo.");
+            if (password.length < 6) return alert("Senha mínima de 6 dígitos.");
+
+            btn.disabled = true; btn.innerText = "Enviando..."; msg.innerText = "";
+            const { data, error } = await supabase.auth.signUp({ email, password });
+            btn.disabled = false; btn.innerHTML = '<span class="material-icons" style="vertical-align: middle; margin-right: 5px;">person_add</span> CRIAR USUÁRIO';
+
+            if (error) { msg.style.color = "red"; msg.innerText = "Erro: " + error.message; }
+            else {
+                msg.style.color = "green";
+                msg.innerText = (data.user && !data.session) ? "Sucesso! E-mail de confirmação enviado." : "Usuário criado com sucesso!";
+                document.getElementById('novo-email').value = '';
+            }
+        });
+    </script>
+</body>
+</html>
