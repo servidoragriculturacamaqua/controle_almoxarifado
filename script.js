@@ -178,8 +178,23 @@ async function carregarDestinos() {
     if(data) els.movDestino.innerHTML = data.map(d=>`<option value="${d.id}">${d.nome}</option>`).join(''); 
 }
 
-// --- UTILITÁRIOS ---
-function iniciarScanner(elemId, cb) { if(scannerAtivo) scannerAtivo.clear().catch(()=>{}); scannerAtivo = new Html5Qrcode(elemId); scannerAtivo.start({facingMode:"environment"}, {fps:10, qrbox:{width:300,height:150}, aspectRatio:1.0, experimentalFeatures:{useBarCodeDetectorIfSupported:true}}, cb).catch(err=>alert("Erro Câmera")); }
+// --- UTILITÁRIOS (MODO BARCODE) ---
+function iniciarScanner(elemId, cb) { 
+    if(scannerAtivo) scannerAtivo.clear().catch(()=>{}); 
+    scannerAtivo = new Html5Qrcode(elemId); 
+    
+    // Configuração Otimizada para Código de Barras
+    const config = {
+        fps: 20, // Mais quadros para focar rápido
+        qrbox: { width: 320, height: 100 }, // Faixa retangular para guiar o usuário
+        aspectRatio: 2.0, // Tela Widescreen (Landscape)
+        experimentalFeatures: { useBarCodeDetectorIfSupported: true } // Usa detector nativo se disponível
+    };
+
+    scannerAtivo.start({ facingMode: "environment" }, config, cb)
+    .catch(err => alert("Erro Câmera: " + err)); 
+}
+
 function pararScanner() { if(scannerAtivo) { scannerAtivo.stop().catch(()=>{}); scannerAtivo=null; } }
 els.btnScanCad.addEventListener('click', () => { els.areaScannerCad.classList.remove('hidden'); iniciarScanner("reader-cad", c => { els.cadCodigo.value=c; pararScannerCadastro(); }); });
 function pararScannerCadastro() { pararScanner(); els.areaScannerCad.classList.add('hidden'); }

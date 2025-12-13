@@ -38,7 +38,7 @@
         </section>
 
         <section id="tela-movimentacao" class="tela">
-            <div id="busca-manual-container" class="card-busca"><label>Movimentar Item:</label><div class="input-row"><input type="text" id="input-busca-manual" placeholder="Buscar por Código ou Nome"><button id="btn-buscar-manual" class="btn-mini azul"><span class="material-icons">search</span></button></div><div class="divider">OU</div><button id="btn-ativar-scanner" class="btn-secondary"><span class="material-icons">qr_code_scanner</span> Ler com a Câmera</button></div>
+            <div id="busca-manual-container" class="card-busca"><label>Movimentar Item:</label><div class="input-row"><input type="text" id="input-busca-manual" placeholder="Código de Barras ou Nome"><button id="btn-buscar-manual" class="btn-mini azul"><span class="material-icons">search</span></button></div><div class="divider">OU</div><button id="btn-ativar-scanner" class="btn-secondary"><span class="material-icons">view_week</span> Ler Código de Barras</button></div>
             <div id="area-scanner-mov" class="scanner-box hidden"><div id="reader-mov"></div><button onclick="pararScannerMovimentacao()" class="btn-mini-danger">Fechar Câmera</button></div>
             <div id="form-movimentacao" class="form-container hidden">
                 <div class="produto-header"><h2 id="mov-nome-produto">...</h2><small id="mov-codigo-produto">...</small></div><p id="mov-saldo-atual" class="destaque-saldo">...</p><input type="hidden" id="mov-id-produto">
@@ -81,7 +81,7 @@
         </section>
 
         <section id="tela-cadastro" class="tela">
-            <div class="form-container"><h3 id="titulo-cadastro">Novo Cadastro</h3><input type="hidden" id="cad-id-editar"><label>Código:</label><div class="input-row"><input type="text" id="cad-codigo" placeholder="Scan ou Digite"><button id="btn-scan-cad" class="btn-mini"><span class="material-icons">qr_code</span></button></div><div id="reader-cad-container" class="hidden scanner-box"><div id="reader-cad"></div><button onclick="pararScannerCadastro()" class="btn-mini-danger">Fechar</button></div><label>Nome:</label><input type="text" id="cad-nome"><label>Unidade:</label><select id="cad-unidade"><option value="un">Unidade</option><option value="lt">Litros</option><option value="kg">Quilos</option><option value="cx">Caixa</option><option value="m">Metros</option><option value="sc">Saco</option></select><button id="btn-salvar-novo" class="btn-action verde">SALVAR</button></div>
+            <div class="form-container"><h3 id="titulo-cadastro">Novo Cadastro</h3><input type="hidden" id="cad-id-editar"><label>Código:</label><div class="input-row"><input type="text" id="cad-codigo" placeholder="Scan Barcode ou Digite"><button id="btn-scan-cad" class="btn-mini"><span class="material-icons">horizontal_split</span></button></div><div id="reader-cad-container" class="hidden scanner-box"><div id="reader-cad"></div><button onclick="pararScannerCadastro()" class="btn-mini-danger">Fechar</button></div><label>Nome:</label><input type="text" id="cad-nome"><label>Unidade:</label><select id="cad-unidade"><option value="un">Unidade</option><option value="lt">Litros</option><option value="kg">Quilos</option><option value="cx">Caixa</option><option value="m">Metros</option><option value="sc">Saco</option></select><button id="btn-salvar-novo" class="btn-action verde">SALVAR</button></div>
         </section>
 
         <section id="tela-maquinas" class="tela">
