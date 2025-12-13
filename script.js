@@ -81,8 +81,13 @@ els.btnGerarPdf.addEventListener('click', () => {
 
 els.movDestino.addEventListener('change', (e) => {
     const txt = e.target.options[e.target.selectedIndex]?.text.toLowerCase() || '';
-    if(txt.includes('frota')||txt.includes('manutenção')||txt.includes('oficina')) els.boxMaquina.classList.remove('hidden');
-    else { els.boxMaquina.classList.add('hidden'); els.selectMaquina.value = ""; }
+    if(txt.includes('frota')||txt.includes('manutenção')||txt.includes('oficina')) {
+        els.boxMaquina.classList.remove('hidden');
+        carregarMaquinasSelect(); // Recarrega para garantir
+    } else { 
+        els.boxMaquina.classList.add('hidden'); 
+        els.selectMaquina.value = ""; 
+    }
 });
 function resetarMovimentacao() { els.containerBuscaManual.classList.remove('hidden'); els.formMov.classList.add('hidden'); els.areaScannerMov.classList.add('hidden'); els.inputBuscaMov.value=''; els.movQtd.value=''; els.selectMaquina.value=''; els.boxMaquina.classList.add('hidden'); pararScanner(); }
 els.btnBuscarMov.addEventListener('click', () => { if(els.inputBuscaMov.value) buscarProdutoMov(els.inputBuscaMov.value); });
