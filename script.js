@@ -16,30 +16,38 @@ let scannerAtivo = null, produtoSelecionado = null, produtoEmEdicaoId = null, da
 // --- ELEMENTOS ---
 const els = {
     btnHome: document.getElementById('btn-home'), titulo: document.getElementById('titulo-pagina'),
-    telaMenu: document.getElementById('tela-menu'), telaMov: document.getElementById('tela-movimentacao'), telaGestao: document.getElementById('tela-gestao'), telaCad: document.getElementById('tela-cadastro'), telaMaquinas: document.getElementById('tela-maquinas'), telaRelatorios: document.getElementById('tela-relatorios'), telaSaldo: document.getElementById('tela-saldo'),
+    telaMenu: document.getElementById('tela-menu'), telaMov: document.getElementById('tela-movimentacao'), telaGestao: document.getElementById('tela-gestao'), telaCad: document.getElementById('tela-cadastro'), telaMaquinas: document.getElementById('tela-maquinas'), telaDestinos: document.getElementById('tela-destinos'), telaRelatorios: document.getElementById('tela-relatorios'), telaSaldo: document.getElementById('tela-saldo'),
     tabelaSaldo: document.querySelector('#tabela-saldo tbody'), btnPdfSaldo: document.getElementById('btn-pdf-saldo'), inputBuscaSaldo: document.getElementById('input-busca-saldo'), btnBuscaSaldo: document.getElementById('btn-busca-saldo'),
     relDataInicio: document.getElementById('rel-data-inicio'), relDataFim: document.getElementById('rel-data-fim'), relMaquina: document.getElementById('rel-maquina'), relDestino: document.getElementById('rel-destino'), btnFiltrarRel: document.getElementById('btn-filtrar-relatorio'), containerResultados: document.getElementById('container-resultados-relatorio'), tabelaRelatorio: document.querySelector('#tabela-relatorio tbody'), btnGerarPdf: document.getElementById('btn-gerar-pdf'),
     listaGestao: document.getElementById('lista-gestao-produtos'), inputBuscaGestao: document.getElementById('input-busca-gestao'), btnBuscaGestao: document.getElementById('btn-busca-gestao'),
     containerBuscaManual: document.getElementById('busca-manual-container'), inputBuscaMov: document.getElementById('input-busca-manual'), btnBuscarMov: document.getElementById('btn-buscar-manual'), btnAtivarScanner: document.getElementById('btn-ativar-scanner'), areaScannerMov: document.getElementById('area-scanner-mov'), formMov: document.getElementById('form-movimentacao'), movNome: document.getElementById('mov-nome-produto'), movSaldo: document.getElementById('mov-saldo-atual'), movCodigo: document.getElementById('mov-codigo-produto'), movQtd: document.getElementById('mov-qtd'), movDestino: document.getElementById('mov-destino'), boxDestino: document.getElementById('box-destino'), boxMaquina: document.getElementById('box-maquina'), selectMaquina: document.getElementById('mov-select-maquina'), btnConfirmarMov: document.getElementById('btn-confirmar-mov'),
     tituloCadastro: document.getElementById('titulo-cadastro'), cadId: document.getElementById('cad-id-editar'), cadCodigo: document.getElementById('cad-codigo'), cadNome: document.getElementById('cad-nome'), cadUnidade: document.getElementById('cad-unidade'), btnSalvarNovo: document.getElementById('btn-salvar-novo'), btnScanCad: document.getElementById('btn-scan-cad'), areaScannerCad: document.getElementById('reader-cad-container'),
-    maqNome: document.getElementById('maq-nome'), btnAddMaq: document.getElementById('btn-add-maq'), listaMaquinas: document.getElementById('lista-maquinas'), listaResumo: document.getElementById('lista-resumo')
+    maqNome: document.getElementById('maq-nome'), btnAddMaq: document.getElementById('btn-add-maq'), listaMaquinas: document.getElementById('lista-maquinas'),
+    destNome: document.getElementById('dest-nome'), btnAddDest: document.getElementById('btn-add-dest'), listaDestinos: document.getElementById('lista-destinos'),
+    listaResumo: document.getElementById('lista-resumo')
 };
 
 // --- INICIALIZAÇÃO E NAV ---
 window.onload = () => { carregarDestinos(); carregarMaquinasSelect(); atualizarResumo(); };
+
 function navegar(destino) {
     document.querySelectorAll('.tela').forEach(t => t.classList.remove('ativa')); els.btnHome.style.display = 'block';
-    if (destino === 'home') { els.telaMenu.classList.add('ativa'); els.titulo.innerText = 'Menu Principal'; els.btnHome.style.display = 'none'; pararScanner(); atualizarResumo(); }
-    else if (destino === 'movimentacao') { els.telaMov.classList.add('ativa'); els.titulo.innerText = 'Movimentação'; resetarMovimentacao(); }
+    
+    if (destino === 'home') { 
+        els.telaMenu.classList.add('ativa'); els.titulo.innerText = 'Menu Principal'; els.btnHome.style.display = 'none'; 
+        pararScanner(); atualizarResumo(); 
+    }
+    else if (destino === 'movimentacao') { els.telaMov.classList.add('ativa'); els.titulo.innerText = 'Movimentação'; resetarMovimentacao(); carregarDestinos(); }
     else if (destino === 'saldo') { els.telaSaldo.classList.add('ativa'); els.titulo.innerText = 'Saldo de Estoque'; carregarTabelaSaldo(); }
     else if (destino === 'relatorios') { els.telaRelatorios.classList.add('ativa'); els.titulo.innerText = 'Histórico'; carregarFiltrosRelatorio(); }
     else if (destino === 'gestao') { els.telaGestao.classList.add('ativa'); els.titulo.innerText = 'Gerenciar Produtos'; carregarListaGestao(); }
     else if (destino === 'cadastro') { els.telaCad.classList.add('ativa'); resetarFormCadastro(); }
     else if (destino === 'maquinas') { els.telaMaquinas.classList.add('ativa'); els.titulo.innerText = 'Máquinas'; carregarListaMaquinasEdit(); }
+    else if (destino === 'destinos') { els.telaDestinos.classList.add('ativa'); els.titulo.innerText = 'Locais / Setores'; carregarListaDestinosEdit(); }
 }
 els.btnHome.addEventListener('click', () => navegar('home'));
 
-// --- FUNÇÕES ---
+// --- FUNÇÕES GERAIS ---
 async function carregarTabelaSaldo(filtro='') {
     els.tabelaSaldo.innerHTML = '<tr><td colspan="3">Carregando...</td></tr>';
     let query = supabase.from('produtos').select('nome, quantidade_atual, unidade').order('nome');
@@ -79,11 +87,12 @@ els.btnGerarPdf.addEventListener('click', () => {
     doc.save("historico.pdf");
 });
 
+// --- LÓGICA DE MOVIMENTAÇÃO ---
 els.movDestino.addEventListener('change', (e) => {
     const txt = e.target.options[e.target.selectedIndex]?.text.toLowerCase() || '';
     if(txt.includes('frota')||txt.includes('manutenção')||txt.includes('oficina')) {
         els.boxMaquina.classList.remove('hidden');
-        carregarMaquinasSelect(); // Recarrega para garantir
+        carregarMaquinasSelect(); 
     } else { 
         els.boxMaquina.classList.add('hidden'); 
         els.selectMaquina.value = ""; 
@@ -119,6 +128,7 @@ function atualizarEstiloBotaoMov() {
 }
 document.querySelectorAll('input[name="tipo_mov"]').forEach(r => r.addEventListener('change', atualizarEstiloBotaoMov));
 
+// --- GESTÃO DE PRODUTOS ---
 els.btnSalvarNovo.addEventListener('click', async () => {
     const cod = els.cadCodigo.value.trim(), nome = els.cadNome.value.trim(), unid = els.cadUnidade.value;
     if (!nome) return alert("Nome obrigatório.");
@@ -137,14 +147,40 @@ window.prepararEdicao = async (id) => { const {data} = await supabase.from('prod
 window.excluirProduto = async (id) => { if(confirm("Excluir?")) { const {error} = await supabase.from('produtos').delete().eq('id',id); if(error) alert("Erro (Item em uso)."); else carregarListaGestao(); } };
 function resetarFormCadastro() { produtoEmEdicaoId=null; els.titulo.innerText='Novo'; els.cadCodigo.value=''; els.cadNome.value=''; els.cadUnidade.value='un'; }
 
+// --- GESTÃO DE MÁQUINAS ---
 els.btnAddMaq.addEventListener('click', async () => { const n = els.maqNome.value.trim(); if(!n) return; await supabase.from('maquinas').insert({nome:n}); els.maqNome.value=''; carregarListaMaquinasEdit(); carregarMaquinasSelect(); });
 async function carregarListaMaquinasEdit() { const {data} = await supabase.from('maquinas').select('*').order('nome'); if(data) els.listaMaquinas.innerHTML = data.map(m=>`<li class="lista-custom"><span>${m.nome}</span><button onclick="excluirMaquina(${m.id})" style="color:red;border:none;background:none;">Del</button></li>`).join(''); }
 window.excluirMaquina = async (id) => { if(confirm("Excluir?")) { const {error} = await supabase.from('maquinas').delete().eq('id',id); if(error) alert("Em uso."); else carregarListaMaquinasEdit(); } };
 async function carregarMaquinasSelect() { const {data} = await supabase.from('maquinas').select('*').order('nome'); if(data) els.selectMaquina.innerHTML='<option value="">Selecione...</option>'+data.map(m=>`<option value="${m.id}">${m.nome}</option>`).join(''); }
 
+// --- GESTÃO DE DESTINOS (LOCAIS) ---
+els.btnAddDest.addEventListener('click', async () => { 
+    const n = els.destNome.value.trim(); 
+    if(!n) return alert("Digite um nome."); 
+    const { error } = await supabase.from('destinos').insert({nome:n}); 
+    if(error) alert("Erro ao salvar.");
+    else { els.destNome.value=''; carregarListaDestinosEdit(); carregarDestinos(); }
+});
+async function carregarListaDestinosEdit() { 
+    els.listaDestinos.innerHTML = 'Carregando...';
+    const {data} = await supabase.from('destinos').select('*').order('nome'); 
+    if(data) els.listaDestinos.innerHTML = data.map(d=>`<li class="lista-custom"><span>${d.nome}</span><button onclick="excluirDestino(${d.id})" style="color:red;border:none;background:none;">Del</button></li>`).join(''); 
+}
+window.excluirDestino = async (id) => { 
+    if(confirm("Excluir local?")) { 
+        const {error} = await supabase.from('destinos').delete().eq('id',id); 
+        if(error) alert("Item em uso no histórico."); 
+        else { carregarListaDestinosEdit(); carregarDestinos(); }
+    } 
+};
+async function carregarDestinos() { 
+    const {data} = await supabase.from('destinos').select('*').order('nome'); 
+    if(data) els.movDestino.innerHTML = data.map(d=>`<option value="${d.id}">${d.nome}</option>`).join(''); 
+}
+
+// --- UTILITÁRIOS ---
 function iniciarScanner(elemId, cb) { if(scannerAtivo) scannerAtivo.clear().catch(()=>{}); scannerAtivo = new Html5Qrcode(elemId); scannerAtivo.start({facingMode:"environment"}, {fps:10, qrbox:{width:300,height:150}, aspectRatio:1.0, experimentalFeatures:{useBarCodeDetectorIfSupported:true}}, cb).catch(err=>alert("Erro Câmera")); }
 function pararScanner() { if(scannerAtivo) { scannerAtivo.stop().catch(()=>{}); scannerAtivo=null; } }
 els.btnScanCad.addEventListener('click', () => { els.areaScannerCad.classList.remove('hidden'); iniciarScanner("reader-cad", c => { els.cadCodigo.value=c; pararScannerCadastro(); }); });
 function pararScannerCadastro() { pararScanner(); els.areaScannerCad.classList.add('hidden'); }
-async function carregarDestinos() { const {data} = await supabase.from('destinos').select('*'); if(data) els.movDestino.innerHTML = data.map(d=>`<option value="${d.id}">${d.nome}</option>`).join(''); }
 async function atualizarResumo() { const {data} = await supabase.from('movimentacoes').select('tipo, quantidade, produtos(nome, unidade)').order('criado_em',{ascending:false}).limit(4); if(data) els.listaResumo.innerHTML = data.map(m=>`<li><span>${m.produtos.nome}</span><strong>${m.tipo==='ENTRADA'?'+':'-'}${m.quantidade}</strong></li>`).join(''); }
