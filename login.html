@@ -121,10 +121,11 @@
 
     <script>
         // --- CONFIGURAÇÃO SUPABASE ---
-        // Substitua pelas suas chaves reais
         const SUPABASE_URL = 'https://fdgxueegvlcyopolswpw.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZkZ3h1ZWVndmxjeW9wb2xzd3B3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNjUzMzYsImV4cCI6MjA4MDg0MTMzNn0.uWVZfcJ_95IDennMWHpnk2JiGrcun3DnKQPEEC_rYos';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        // CORREÇÃO AQUI: Mudamos de 'const supabase' para 'const sb'
+        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         // --- FUNÇÃO MOSTRAR/OCULTAR SENHA ---
         function toggleSenha() {
@@ -132,11 +133,11 @@
             const icone = document.getElementById('olho');
 
             if (inputSenha.type === 'password') {
-                inputSenha.type = 'text'; // Vira texto visível
-                icone.innerText = 'visibility_off'; // Muda ícone para olho riscado
+                inputSenha.type = 'text'; 
+                icone.innerText = 'visibility_off'; 
             } else {
-                inputSenha.type = 'password'; // Vira bolinhas
-                icone.innerText = 'visibility'; // Muda ícone para olho normal
+                inputSenha.type = 'password'; 
+                icone.innerText = 'visibility'; 
             }
         }
 
@@ -157,7 +158,8 @@
             btn.disabled = true;
             msg.style.display = 'none';
 
-            const { data, error } = await supabase.auth.signInWithPassword({
+            // Usando 'sb' em vez de 'supabase'
+            const { data, error } = await sb.auth.signInWithPassword({
                 email: email,
                 password: password,
             });
