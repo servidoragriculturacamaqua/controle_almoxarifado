@@ -1,14 +1,15 @@
 // CONFIGURAÇÃO DO SUPABASE
+// Renomeamos a variável para 'sb' para evitar conflito com a biblioteca
 const SUPABASE_URL = 'https://fdgxueegvlcyopolswpw.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZkZ3h1ZWVndmxjeW9wb2xzd3B3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNjUzMzYsImV4cCI6MjA4MDg0MTMzNn0.uWVZfcJ_95IDennMWHpnk2JiGrcun3DnKQPEEC_rYos';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // --- 🔒 SEGURANÇA ---
 (async function verificarSessao() {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await sb.auth.getSession();
     if (!session) window.location.href = 'login.html';
 })();
-async function sairDoSistema() { await supabase.auth.signOut(); window.location.href = 'login.html'; }
+async function sairDoSistema() { await sb.auth.signOut(); window.location.href = 'login.html'; }
 
 // --- VARIÁVEIS ---
 let scannerAtivo = null, produtoSelecionado = null, produtoEmEdicaoId = null, dadosRelatorioAtual = [], dadosSaldoEstoque = [];
@@ -24,7 +25,8 @@ const els = {
     tituloCadastro: document.getElementById('titulo-cadastro'), cadId: document.getElementById('cad-id-editar'), cadCodigo: document.getElementById('cad-codigo'), cadNome: document.getElementById('cad-nome'), cadUnidade: document.getElementById('cad-unidade'), btnSalvarNovo: document.getElementById('btn-salvar-novo'), btnScanCad: document.getElementById('btn-scan-cad'), areaScannerCad: document.getElementById('reader-cad-container'),
     maqNome: document.getElementById('maq-nome'), btnAddMaq: document.getElementById('btn-add-maq'), listaMaquinas: document.getElementById('lista-maquinas'),
     destNome: document.getElementById('dest-nome'), btnAddDest: document.getElementById('btn-add-dest'), listaDestinos: document.getElementById('lista-destinos'),
-    listaResumo: document.getElementById('lista-resumo')
+    listaResumo: document.getElementById('lista-resumo'),
+    imgLogo: document.getElementById('logo-header')
 };
 
 // --- INICIALIZAÇÃO E NAV ---
@@ -47,31 +49,72 @@ function navegar(destino) {
 }
 els.btnHome.addEventListener('click', () => navegar('home'));
 
+// --- HELPER PDF ---
+function getLogoBase64() {
+    if (!els.imgLogo) return null;
+    const canvas = document.createElement("canvas");
+    canvas.width = els.imgLogo.naturalWidth;
+    canvas.height = els.imgLogo.naturalHeight;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(els.imgLogo, 0, 0);
+    return canvas.toDataURL("image/png");
+}
+
+function adicionarCabecalhoPdf(doc, tituloDoc) {
+    try {
+        const logoData = getLogoBase64();
+        if(logoData) doc.addImage(logoData, 'PNG', 14, 10, 25, 25);
+    } catch(e) { console.error("Erro logo pdf", e); }
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text("PREFEITURA MUNICIPAL DE CAMAQUÃ", 105, 18, { align: "center" });
+    
+    doc.setFontSize(10);
+    doc.text("SECRETARIA MUNICIPAL DE AGRICULTURA E ABASTECIMENTO", 105, 24, { align: "center" });
+
+    doc.setFontSize(14);
+    doc.text(tituloDoc, 105, 40, { align: "center" });
+    
+    doc.setLineWidth(0.5);
+    doc.line(14, 45, 196, 45);
+}
+
 // --- FUNÇÕES GERAIS ---
 async function carregarTabelaSaldo(filtro='') {
     els.tabelaSaldo.innerHTML = '<tr><td colspan="3">Carregando...</td></tr>';
-    let query = supabase.from('produtos').select('nome, quantidade_atual, unidade').order('nome');
+    let query = sb.from('produtos').select('nome, quantidade_atual, unidade').order('nome');
     if (filtro) query = query.ilike('nome', `%${filtro.trim()}%`);
     const { data } = await query; dadosSaldoEstoque = data || [];
     if (!data || data.length === 0) { els.tabelaSaldo.innerHTML = '<tr><td colspan="3">Vazio.</td></tr>'; return; }
     els.tabelaSaldo.innerHTML = data.map(p => `<tr><td>${p.nome}</td><td style="text-align:center" class="${p.quantidade_atual<5?'estoque-baixo':''}">${p.quantidade_atual}</td><td>${p.unidade}</td></tr>`).join('');
 }
 els.btnBuscaSaldo.addEventListener('click', () => carregarTabelaSaldo(els.inputBuscaSaldo.value));
+
+// PDF SALDO
 els.btnPdfSaldo.addEventListener('click', () => {
     if(!dadosSaldoEstoque.length) return alert("Nada para imprimir");
-    const { jsPDF } = window.jspdf; const doc = new jsPDF();
-    doc.text("Inventário - Agricultura", 14, 20);
-    doc.autoTable({ head: [['Produto', 'Qtd', 'Unid']], body: dadosSaldoEstoque.map(p=>[p.nome, p.quantidade_atual, p.unidade]), startY: 30 });
-    doc.save("inventario.pdf");
+    const { jsPDF } = window.jspdf; 
+    const doc = new jsPDF();
+    
+    adicionarCabecalhoPdf(doc, "INVENTÁRIO DE ESTOQUE");
+
+    doc.autoTable({ 
+        head: [['Produto', 'Qtd', 'Unid']], 
+        body: dadosSaldoEstoque.map(p=>[p.nome, p.quantidade_atual, p.unidade]), 
+        startY: 50,
+        theme: 'grid'
+    });
+    doc.save("inventario_agricultura.pdf");
 });
 
 async function carregarFiltrosRelatorio() {
-    const { data: maqs } = await supabase.from('maquinas').select('*'); if(maqs) els.relMaquina.innerHTML = '<option value="">Todas</option>' + maqs.map(m=>`<option value="${m.id}">${m.nome}</option>`).join('');
-    const { data: dests } = await supabase.from('destinos').select('*'); if(dests) els.relDestino.innerHTML = '<option value="">Todos</option>' + dests.map(d=>`<option value="${d.id}">${d.nome}</option>`).join('');
+    const { data: maqs } = await sb.from('maquinas').select('*'); if(maqs) els.relMaquina.innerHTML = '<option value="">Todas</option>' + maqs.map(m=>`<option value="${m.id}">${m.nome}</option>`).join('');
+    const { data: dests } = await sb.from('destinos').select('*'); if(dests) els.relDestino.innerHTML = '<option value="">Todos</option>' + dests.map(d=>`<option value="${d.id}">${d.nome}</option>`).join('');
 }
 els.btnFiltrarRel.addEventListener('click', async () => {
     els.containerResultados.classList.remove('hidden'); els.tabelaRelatorio.innerHTML = '<tr><td colspan="5">Pesquisando...</td></tr>';
-    let query = supabase.from('movimentacoes').select(`criado_em, tipo, quantidade, produtos(nome, unidade), destinos(nome), maquinas(nome)`).order('criado_em', { ascending: false });
+    let query = sb.from('movimentacoes').select(`criado_em, tipo, quantidade, produtos(nome, unidade), destinos(nome), maquinas(nome)`).order('criado_em', { ascending: false });
     if (els.relDataInicio.value) query = query.gte('criado_em', els.relDataInicio.value + 'T00:00:00');
     if (els.relDataFim.value) query = query.lte('criado_em', els.relDataFim.value + 'T23:59:59');
     if (els.relMaquina.value) query = query.eq('maquina_id', els.relMaquina.value);
@@ -80,11 +123,22 @@ els.btnFiltrarRel.addEventListener('click', async () => {
     if (!data || !data.length) { els.tabelaRelatorio.innerHTML = '<tr><td colspan="5">Nenhum registro.</td></tr>'; return; }
     els.tabelaRelatorio.innerHTML = data.map(i => `<tr><td>${new Date(i.criado_em).toLocaleDateString()}</td><td>${i.produtos?.nome}</td><td style="color:${i.tipo==='ENTRADA'?'green':'red'}">${i.tipo}</td><td>${i.quantidade}</td><td>${i.maquinas?.nome || i.destinos?.nome || '-'}</td></tr>`).join('');
 });
+
+// PDF RELATÓRIO
 els.btnGerarPdf.addEventListener('click', () => {
     if(!dadosRelatorioAtual.length) return alert("Nada para imprimir.");
-    const { jsPDF } = window.jspdf; const doc = new jsPDF(); doc.text("Histórico", 14, 20);
-    doc.autoTable({ head: [['Data', 'Produto', 'Tipo', 'Qtd', 'Local']], body: dadosRelatorioAtual.map(i=>[new Date(i.criado_em).toLocaleDateString(), i.produtos?.nome, i.tipo, i.quantidade, i.maquinas?.nome||i.destinos?.nome||'']), startY:30 });
-    doc.save("historico.pdf");
+    const { jsPDF } = window.jspdf; 
+    const doc = new jsPDF();
+    
+    adicionarCabecalhoPdf(doc, "HISTÓRICO DE MOVIMENTAÇÃO");
+
+    doc.autoTable({ 
+        head: [['Data', 'Produto', 'Tipo', 'Qtd', 'Local']], 
+        body: dadosRelatorioAtual.map(i=>[new Date(i.criado_em).toLocaleDateString(), i.produtos?.nome, i.tipo, i.quantidade, i.maquinas?.nome||i.destinos?.nome||'']), 
+        startY: 50,
+        theme: 'grid'
+    });
+    doc.save("historico_agricultura.pdf");
 });
 
 // --- LÓGICA DE MOVIMENTAÇÃO ---
@@ -104,8 +158,8 @@ els.btnAtivarScanner.addEventListener('click', () => { els.areaScannerMov.classL
 function pararScannerMovimentacao() { pararScanner(); els.areaScannerMov.classList.add('hidden'); }
 async function buscarProdutoMov(termo) {
     termo = termo.trim();
-    let { data } = await supabase.from('produtos').select('*').eq('codigo_barras', termo).maybeSingle();
-    if (!data) { const {data:l} = await supabase.from('produtos').select('*').ilike('nome', `%${termo}%`).limit(1); if(l&&l.length) data=l[0]; }
+    let { data } = await sb.from('produtos').select('*').eq('codigo_barras', termo).maybeSingle();
+    if (!data) { const {data:l} = await sb.from('produtos').select('*').ilike('nome', `%${termo}%`).limit(1); if(l&&l.length) data=l[0]; }
     if (data) {
         produtoSelecionado = data; els.containerBuscaManual.classList.add('hidden'); els.areaScannerMov.classList.add('hidden'); els.formMov.classList.remove('hidden');
         els.movNome.innerText = data.nome; els.movCodigo.innerText = data.codigo_barras||'Manual'; els.movSaldo.innerText = `Saldo: ${data.quantidade_atual} ${data.unidade}`; atualizarEstiloBotaoMov();
@@ -117,8 +171,8 @@ els.btnConfirmarMov.addEventListener('click', async () => {
     if (!qtd || qtd <= 0) return alert("Qtd inválida.");
     let novoSaldo = parseFloat(produtoSelecionado.quantidade_atual);
     if (tipo === 'SAIDA') { if (qtd > novoSaldo) return alert("Saldo insuficiente."); novoSaldo -= qtd; } else novoSaldo += qtd;
-    const {error:e1} = await supabase.from('movimentacoes').insert({ produto_id: produtoSelecionado.id, tipo, quantidade: qtd, destino_id: (tipo==='SAIDA'?els.movDestino.value:null), maquina_id: (tipo==='SAIDA'?maq:null) });
-    const {error:e2} = await supabase.from('produtos').update({ quantidade_atual: novoSaldo }).eq('id', produtoSelecionado.id);
+    const {error:e1} = await sb.from('movimentacoes').insert({ produto_id: produtoSelecionado.id, tipo, quantidade: qtd, destino_id: (tipo==='SAIDA'?els.movDestino.value:null), maquina_id: (tipo==='SAIDA'?maq:null) });
+    const {error:e2} = await sb.from('produtos').update({ quantidade_atual: novoSaldo }).eq('id', produtoSelecionado.id);
     if (!e1 && !e2) { alert("Sucesso!"); navegar('home'); } else alert("Erro.");
 });
 function atualizarEstiloBotaoMov() {
@@ -133,69 +187,68 @@ els.btnSalvarNovo.addEventListener('click', async () => {
     const cod = els.cadCodigo.value.trim(), nome = els.cadNome.value.trim(), unid = els.cadUnidade.value;
     if (!nome) return alert("Nome obrigatório.");
     const dados = { codigo_barras: cod, nome, unidade: unid }; let err = null;
-    if (produtoEmEdicaoId) { const {error} = await supabase.from('produtos').update(dados).eq('id', produtoEmEdicaoId); err=error; }
-    else { dados.quantidade_atual = 0; const {error} = await supabase.from('produtos').insert(dados); err=error; }
+    if (produtoEmEdicaoId) { const {error} = await sb.from('produtos').update(dados).eq('id', produtoEmEdicaoId); err=error; }
+    else { dados.quantidade_atual = 0; const {error} = await sb.from('produtos').insert(dados); err=error; }
     if (!err) { alert("Salvo!"); navegar(produtoEmEdicaoId ? 'gestao' : 'home'); } else alert("Erro.");
 });
 async function carregarListaGestao(f='') {
-    els.listaGestao.innerHTML = 'Carregando...'; let q = supabase.from('produtos').select('*').order('nome'); if(f) q=q.ilike('nome',`%${f.trim()}%`);
+    els.listaGestao.innerHTML = 'Carregando...'; let q = sb.from('produtos').select('*').order('nome'); if(f) q=q.ilike('nome',`%${f.trim()}%`);
     const { data } = await q; if (!data || !data.length) { els.listaGestao.innerHTML='Vazio.'; return; }
     els.listaGestao.innerHTML = data.map(p => `<li class="lista-custom"><div><strong>${p.nome}</strong><br><small>${p.codigo_barras||'-'}</small></div><div><button onclick="prepararEdicao(${p.id})" style="border:none;background:none;color:blue;margin-right:10px;">Edit</button><button onclick="excluirProduto(${p.id})" style="border:none;background:none;color:red;">Del</button></div></li>`).join('');
 }
 els.btnBuscaGestao.addEventListener('click', () => carregarListaGestao(els.inputBuscaGestao.value));
-window.prepararEdicao = async (id) => { const {data} = await supabase.from('produtos').select('*').eq('id',id).single(); if(data) { els.telaGestao.classList.remove('ativa'); els.telaCad.classList.add('ativa'); els.titulo.innerText='Editar'; produtoEmEdicaoId=data.id; els.cadCodigo.value=data.codigo_barras||''; els.cadNome.value=data.nome; els.cadUnidade.value=data.unidade; } };
-window.excluirProduto = async (id) => { if(confirm("Excluir?")) { const {error} = await supabase.from('produtos').delete().eq('id',id); if(error) alert("Erro (Item em uso)."); else carregarListaGestao(); } };
+window.prepararEdicao = async (id) => { const {data} = await sb.from('produtos').select('*').eq('id',id).single(); if(data) { els.telaGestao.classList.remove('ativa'); els.telaCad.classList.add('ativa'); els.titulo.innerText='Editar'; produtoEmEdicaoId=data.id; els.cadCodigo.value=data.codigo_barras||''; els.cadNome.value=data.nome; els.cadUnidade.value=data.unidade; } };
+window.excluirProduto = async (id) => { if(confirm("Excluir?")) { const {error} = await sb.from('produtos').delete().eq('id',id); if(error) alert("Erro (Item em uso)."); else carregarListaGestao(); } };
 function resetarFormCadastro() { produtoEmEdicaoId=null; els.titulo.innerText='Novo'; els.cadCodigo.value=''; els.cadNome.value=''; els.cadUnidade.value='un'; }
 
 // --- GESTÃO DE MÁQUINAS ---
-els.btnAddMaq.addEventListener('click', async () => { const n = els.maqNome.value.trim(); if(!n) return; await supabase.from('maquinas').insert({nome:n}); els.maqNome.value=''; carregarListaMaquinasEdit(); carregarMaquinasSelect(); });
-async function carregarListaMaquinasEdit() { const {data} = await supabase.from('maquinas').select('*').order('nome'); if(data) els.listaMaquinas.innerHTML = data.map(m=>`<li class="lista-custom"><span>${m.nome}</span><button onclick="excluirMaquina(${m.id})" style="color:red;border:none;background:none;">Del</button></li>`).join(''); }
-window.excluirMaquina = async (id) => { if(confirm("Excluir?")) { const {error} = await supabase.from('maquinas').delete().eq('id',id); if(error) alert("Em uso."); else carregarListaMaquinasEdit(); } };
-async function carregarMaquinasSelect() { const {data} = await supabase.from('maquinas').select('*').order('nome'); if(data) els.selectMaquina.innerHTML='<option value="">Selecione...</option>'+data.map(m=>`<option value="${m.id}">${m.nome}</option>`).join(''); }
+els.btnAddMaq.addEventListener('click', async () => { const n = els.maqNome.value.trim(); if(!n) return; await sb.from('maquinas').insert({nome:n}); els.maqNome.value=''; carregarListaMaquinasEdit(); carregarMaquinasSelect(); });
+async function carregarListaMaquinasEdit() { const {data} = await sb.from('maquinas').select('*').order('nome'); if(data) els.listaMaquinas.innerHTML = data.map(m=>`<li class="lista-custom"><span>${m.nome}</span><button onclick="excluirMaquina(${m.id})" style="color:red;border:none;background:none;">Del</button></li>`).join(''); }
+window.excluirMaquina = async (id) => { if(confirm("Excluir?")) { const {error} = await sb.from('maquinas').delete().eq('id',id); if(error) alert("Em uso."); else carregarListaMaquinasEdit(); } };
+async function carregarMaquinasSelect() { const {data} = await sb.from('maquinas').select('*').order('nome'); if(data) els.selectMaquina.innerHTML='<option value="">Selecione...</option>'+data.map(m=>`<option value="${m.id}">${m.nome}</option>`).join(''); }
 
 // --- GESTÃO DE DESTINOS (LOCAIS) ---
 els.btnAddDest.addEventListener('click', async () => { 
     const n = els.destNome.value.trim(); 
     if(!n) return alert("Digite um nome."); 
-    const { error } = await supabase.from('destinos').insert({nome:n}); 
+    const { error } = await sb.from('destinos').insert({nome:n}); 
     if(error) alert("Erro ao salvar.");
     else { els.destNome.value=''; carregarListaDestinosEdit(); carregarDestinos(); }
 });
 async function carregarListaDestinosEdit() { 
     els.listaDestinos.innerHTML = 'Carregando...';
-    const {data} = await supabase.from('destinos').select('*').order('nome'); 
+    const {data} = await sb.from('destinos').select('*').order('nome'); 
     if(data) els.listaDestinos.innerHTML = data.map(d=>`<li class="lista-custom"><span>${d.nome}</span><button onclick="excluirDestino(${d.id})" style="color:red;border:none;background:none;">Del</button></li>`).join(''); 
 }
 window.excluirDestino = async (id) => { 
     if(confirm("Excluir local?")) { 
-        const {error} = await supabase.from('destinos').delete().eq('id',id); 
+        const {error} = await sb.from('destinos').delete().eq('id',id); 
         if(error) alert("Item em uso no histórico."); 
         else { carregarListaDestinosEdit(); carregarDestinos(); }
     } 
 };
 async function carregarDestinos() { 
-    const {data} = await supabase.from('destinos').select('*').order('nome'); 
+    const {data} = await sb.from('destinos').select('*').order('nome'); 
     if(data) els.movDestino.innerHTML = data.map(d=>`<option value="${d.id}">${d.nome}</option>`).join(''); 
 }
 
-// --- UTILITÁRIOS (MODO BARCODE) ---
+// --- UTILITÁRIOS (SCANNER BARCODE) ---
 function iniciarScanner(elemId, cb) { 
     if(scannerAtivo) scannerAtivo.clear().catch(()=>{}); 
     scannerAtivo = new Html5Qrcode(elemId); 
     
-    // Configuração Otimizada para Código de Barras
+    // Configurações para Código de Barras (Widescreen)
     const config = {
-        fps: 20, // Mais quadros para focar rápido
-        qrbox: { width: 320, height: 100 }, // Faixa retangular para guiar o usuário
-        aspectRatio: 2.0, // Tela Widescreen (Landscape)
-        experimentalFeatures: { useBarCodeDetectorIfSupported: true } // Usa detector nativo se disponível
+        fps: 20,
+        qrbox: { width: 320, height: 100 },
+        aspectRatio: 2.0,
+        experimentalFeatures: { useBarCodeDetectorIfSupported: true }
     };
 
     scannerAtivo.start({ facingMode: "environment" }, config, cb)
     .catch(err => alert("Erro Câmera: " + err)); 
 }
-
 function pararScanner() { if(scannerAtivo) { scannerAtivo.stop().catch(()=>{}); scannerAtivo=null; } }
 els.btnScanCad.addEventListener('click', () => { els.areaScannerCad.classList.remove('hidden'); iniciarScanner("reader-cad", c => { els.cadCodigo.value=c; pararScannerCadastro(); }); });
 function pararScannerCadastro() { pararScanner(); els.areaScannerCad.classList.add('hidden'); }
-async function atualizarResumo() { const {data} = await supabase.from('movimentacoes').select('tipo, quantidade, produtos(nome, unidade)').order('criado_em',{ascending:false}).limit(4); if(data) els.listaResumo.innerHTML = data.map(m=>`<li><span>${m.produtos.nome}</span><strong>${m.tipo==='ENTRADA'?'+':'-'}${m.quantidade}</strong></li>`).join(''); }
+async function atualizarResumo() { const {data} = await sb.from('movimentacoes').select('tipo, quantidade, produtos(nome, unidade)').order('criado_em',{ascending:false}).limit(4); if(data) els.listaResumo.innerHTML = data.map(m=>`<li><span>${m.produtos.nome}</span><strong>${m.tipo==='ENTRADA'?'+':'-'}${m.quantidade}</strong></li>`).join(''); }
