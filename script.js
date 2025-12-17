@@ -1,5 +1,4 @@
 // CONFIGURAÇÃO DO SUPABASE
-// Renomeamos a variável para 'sb' para evitar conflito com a biblioteca
 const SUPABASE_URL = 'https://fdgxueegvlcyopolswpw.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZkZ3h1ZWVndmxjeW9wb2xzd3B3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNjUzMzYsImV4cCI6MjA4MDg0MTMzNn0.uWVZfcJ_95IDennMWHpnk2JiGrcun3DnKQPEEC_rYos';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -69,13 +68,11 @@ function adicionarCabecalhoPdf(doc, tituloDoc) {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(12);
     doc.text("PREFEITURA MUNICIPAL DE CAMAQUÃ", 105, 18, { align: "center" });
-    
     doc.setFontSize(10);
     doc.text("SECRETARIA MUNICIPAL DE AGRICULTURA E ABASTECIMENTO", 105, 24, { align: "center" });
 
     doc.setFontSize(14);
     doc.text(tituloDoc, 105, 40, { align: "center" });
-    
     doc.setLineWidth(0.5);
     doc.line(14, 45, 196, 45);
 }
@@ -93,18 +90,11 @@ els.btnBuscaSaldo.addEventListener('click', () => carregarTabelaSaldo(els.inputB
 
 // PDF SALDO
 els.btnPdfSaldo.addEventListener('click', () => {
-    if(!dadosSaldoEstoque.length) return alert("Nada para imprimir");
+    if(!dadosSaldoEstoque.length) return Swal.fire('Atenção', 'Nada para imprimir.', 'warning');
     const { jsPDF } = window.jspdf; 
     const doc = new jsPDF();
-    
     adicionarCabecalhoPdf(doc, "INVENTÁRIO DE ESTOQUE");
-
-    doc.autoTable({ 
-        head: [['Produto', 'Qtd', 'Unid']], 
-        body: dadosSaldoEstoque.map(p=>[p.nome, p.quantidade_atual, p.unidade]), 
-        startY: 50,
-        theme: 'grid'
-    });
+    doc.autoTable({ head: [['Produto', 'Qtd', 'Unid']], body: dadosSaldoEstoque.map(p=>[p.nome, p.quantidade_atual, p.unidade]), startY: 50, theme: 'grid' });
     doc.save("inventario_agricultura.pdf");
 });
 
@@ -126,18 +116,11 @@ els.btnFiltrarRel.addEventListener('click', async () => {
 
 // PDF RELATÓRIO
 els.btnGerarPdf.addEventListener('click', () => {
-    if(!dadosRelatorioAtual.length) return alert("Nada para imprimir.");
+    if(!dadosRelatorioAtual.length) return Swal.fire('Atenção', 'Nada para imprimir.', 'warning');
     const { jsPDF } = window.jspdf; 
     const doc = new jsPDF();
-    
     adicionarCabecalhoPdf(doc, "HISTÓRICO DE MOVIMENTAÇÃO");
-
-    doc.autoTable({ 
-        head: [['Data', 'Produto', 'Tipo', 'Qtd', 'Local']], 
-        body: dadosRelatorioAtual.map(i=>[new Date(i.criado_em).toLocaleDateString(), i.produtos?.nome, i.tipo, i.quantidade, i.maquinas?.nome||i.destinos?.nome||'']), 
-        startY: 50,
-        theme: 'grid'
-    });
+    doc.autoTable({ head: [['Data', 'Produto', 'Tipo', 'Qtd', 'Local']], body: dadosRelatorioAtual.map(i=>[new Date(i.criado_em).toLocaleDateString(), i.produtos?.nome, i.tipo, i.quantidade, i.maquinas?.nome||i.destinos?.nome||'']), startY: 50, theme: 'grid' });
     doc.save("historico_agricultura.pdf");
 });
 
@@ -145,12 +128,8 @@ els.btnGerarPdf.addEventListener('click', () => {
 els.movDestino.addEventListener('change', (e) => {
     const txt = e.target.options[e.target.selectedIndex]?.text.toLowerCase() || '';
     if(txt.includes('frota')||txt.includes('manutenção')||txt.includes('oficina')) {
-        els.boxMaquina.classList.remove('hidden');
-        carregarMaquinasSelect(); 
-    } else { 
-        els.boxMaquina.classList.add('hidden'); 
-        els.selectMaquina.value = ""; 
-    }
+        els.boxMaquina.classList.remove('hidden'); carregarMaquinasSelect(); 
+    } else { els.boxMaquina.classList.add('hidden'); els.selectMaquina.value = ""; }
 });
 function resetarMovimentacao() { els.containerBuscaManual.classList.remove('hidden'); els.formMov.classList.add('hidden'); els.areaScannerMov.classList.add('hidden'); els.inputBuscaMov.value=''; els.movQtd.value=''; els.selectMaquina.value=''; els.boxMaquina.classList.add('hidden'); pararScanner(); }
 els.btnBuscarMov.addEventListener('click', () => { if(els.inputBuscaMov.value) buscarProdutoMov(els.inputBuscaMov.value); });
@@ -163,17 +142,20 @@ async function buscarProdutoMov(termo) {
     if (data) {
         produtoSelecionado = data; els.containerBuscaManual.classList.add('hidden'); els.areaScannerMov.classList.add('hidden'); els.formMov.classList.remove('hidden');
         els.movNome.innerText = data.nome; els.movCodigo.innerText = data.codigo_barras||'Manual'; els.movSaldo.innerText = `Saldo: ${data.quantidade_atual} ${data.unidade}`; atualizarEstiloBotaoMov();
-    } else alert("Não encontrado.");
+    } else Swal.fire('Erro', 'Produto não encontrado.', 'error');
 }
 els.btnConfirmarMov.addEventListener('click', async () => {
     const tipo = document.querySelector('input[name="tipo_mov"]:checked').value; const qtd = parseFloat(els.movQtd.value);
-    let maq = null; if(!els.boxMaquina.classList.contains('hidden')) { maq = els.selectMaquina.value; if(!maq && tipo === 'SAIDA') return alert("Selecione máquina."); if(!maq) maq=null; }
-    if (!qtd || qtd <= 0) return alert("Qtd inválida.");
+    let maq = null; if(!els.boxMaquina.classList.contains('hidden')) { maq = els.selectMaquina.value; if(!maq && tipo === 'SAIDA') return Swal.fire('Atenção', 'Selecione a máquina.', 'warning'); if(!maq) maq=null; }
+    if (!qtd || qtd <= 0) return Swal.fire('Atenção', 'Quantidade inválida.', 'warning');
     let novoSaldo = parseFloat(produtoSelecionado.quantidade_atual);
-    if (tipo === 'SAIDA') { if (qtd > novoSaldo) return alert("Saldo insuficiente."); novoSaldo -= qtd; } else novoSaldo += qtd;
+    if (tipo === 'SAIDA') { if (qtd > novoSaldo) return Swal.fire('Erro', 'Saldo insuficiente.', 'error'); novoSaldo -= qtd; } else novoSaldo += qtd;
     const {error:e1} = await sb.from('movimentacoes').insert({ produto_id: produtoSelecionado.id, tipo, quantidade: qtd, destino_id: (tipo==='SAIDA'?els.movDestino.value:null), maquina_id: (tipo==='SAIDA'?maq:null) });
     const {error:e2} = await sb.from('produtos').update({ quantidade_atual: novoSaldo }).eq('id', produtoSelecionado.id);
-    if (!e1 && !e2) { alert("Sucesso!"); navegar('home'); } else alert("Erro.");
+    if (!e1 && !e2) { 
+        Swal.fire({ title: 'Sucesso!', text: 'Movimentação realizada.', icon: 'success', timer: 1500, showConfirmButton: false });
+        setTimeout(() => navegar('home'), 1500);
+    } else Swal.fire('Erro', 'Falha ao salvar.', 'error');
 });
 function atualizarEstiloBotaoMov() {
     const tipo = document.querySelector('input[name="tipo_mov"]:checked').value;
@@ -185,11 +167,14 @@ document.querySelectorAll('input[name="tipo_mov"]').forEach(r => r.addEventListe
 // --- GESTÃO DE PRODUTOS ---
 els.btnSalvarNovo.addEventListener('click', async () => {
     const cod = els.cadCodigo.value.trim(), nome = els.cadNome.value.trim(), unid = els.cadUnidade.value;
-    if (!nome) return alert("Nome obrigatório.");
+    if (!nome) return Swal.fire('Atenção', 'Nome é obrigatório.', 'warning');
     const dados = { codigo_barras: cod, nome, unidade: unid }; let err = null;
     if (produtoEmEdicaoId) { const {error} = await sb.from('produtos').update(dados).eq('id', produtoEmEdicaoId); err=error; }
     else { dados.quantidade_atual = 0; const {error} = await sb.from('produtos').insert(dados); err=error; }
-    if (!err) { alert("Salvo!"); navegar(produtoEmEdicaoId ? 'gestao' : 'home'); } else alert("Erro.");
+    if (!err) { 
+        Swal.fire({ title: 'Salvo!', icon: 'success', timer: 1000, showConfirmButton: false });
+        navegar(produtoEmEdicaoId ? 'gestao' : 'home'); 
+    } else Swal.fire('Erro', 'Falha ao salvar.', 'error');
 });
 async function carregarListaGestao(f='') {
     els.listaGestao.innerHTML = 'Carregando...'; let q = sb.from('produtos').select('*').order('nome'); if(f) q=q.ilike('nome',`%${f.trim()}%`);
@@ -198,21 +183,27 @@ async function carregarListaGestao(f='') {
 }
 els.btnBuscaGestao.addEventListener('click', () => carregarListaGestao(els.inputBuscaGestao.value));
 window.prepararEdicao = async (id) => { const {data} = await sb.from('produtos').select('*').eq('id',id).single(); if(data) { els.telaGestao.classList.remove('ativa'); els.telaCad.classList.add('ativa'); els.titulo.innerText='Editar'; produtoEmEdicaoId=data.id; els.cadCodigo.value=data.codigo_barras||''; els.cadNome.value=data.nome; els.cadUnidade.value=data.unidade; } };
-window.excluirProduto = async (id) => { if(confirm("Excluir?")) { const {error} = await sb.from('produtos').delete().eq('id',id); if(error) alert("Erro (Item em uso)."); else carregarListaGestao(); } };
+window.excluirProduto = async (id) => { 
+    const result = await Swal.fire({ title: 'Excluir produto?', text: "Não será possível reverter.", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Sim, excluir' });
+    if(result.isConfirmed) { const {error} = await sb.from('produtos').delete().eq('id',id); if(error) Swal.fire('Erro', 'Item em uso, não pode excluir.', 'error'); else { Swal.fire('Excluído!', '', 'success'); carregarListaGestao(); } } 
+};
 function resetarFormCadastro() { produtoEmEdicaoId=null; els.titulo.innerText='Novo'; els.cadCodigo.value=''; els.cadNome.value=''; els.cadUnidade.value='un'; }
 
 // --- GESTÃO DE MÁQUINAS ---
 els.btnAddMaq.addEventListener('click', async () => { const n = els.maqNome.value.trim(); if(!n) return; await sb.from('maquinas').insert({nome:n}); els.maqNome.value=''; carregarListaMaquinasEdit(); carregarMaquinasSelect(); });
 async function carregarListaMaquinasEdit() { const {data} = await sb.from('maquinas').select('*').order('nome'); if(data) els.listaMaquinas.innerHTML = data.map(m=>`<li class="lista-custom"><span>${m.nome}</span><button onclick="excluirMaquina(${m.id})" style="color:red;border:none;background:none;">Del</button></li>`).join(''); }
-window.excluirMaquina = async (id) => { if(confirm("Excluir?")) { const {error} = await sb.from('maquinas').delete().eq('id',id); if(error) alert("Em uso."); else carregarListaMaquinasEdit(); } };
+window.excluirMaquina = async (id) => { 
+    const result = await Swal.fire({ title: 'Excluir máquina?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Sim' });
+    if(result.isConfirmed) { const {error} = await sb.from('maquinas').delete().eq('id',id); if(error) Swal.fire('Erro', 'Máquina em uso.', 'error'); else { Swal.fire('Excluído', '', 'success'); carregarListaMaquinasEdit(); } }
+};
 async function carregarMaquinasSelect() { const {data} = await sb.from('maquinas').select('*').order('nome'); if(data) els.selectMaquina.innerHTML='<option value="">Selecione...</option>'+data.map(m=>`<option value="${m.id}">${m.nome}</option>`).join(''); }
 
 // --- GESTÃO DE DESTINOS (LOCAIS) ---
 els.btnAddDest.addEventListener('click', async () => { 
     const n = els.destNome.value.trim(); 
-    if(!n) return alert("Digite um nome."); 
+    if(!n) return Swal.fire('Atenção', 'Digite um nome.', 'warning');
     const { error } = await sb.from('destinos').insert({nome:n}); 
-    if(error) alert("Erro ao salvar.");
+    if(error) Swal.fire('Erro', 'Falha ao salvar.', 'error');
     else { els.destNome.value=''; carregarListaDestinosEdit(); carregarDestinos(); }
 });
 async function carregarListaDestinosEdit() { 
@@ -221,32 +212,20 @@ async function carregarListaDestinosEdit() {
     if(data) els.listaDestinos.innerHTML = data.map(d=>`<li class="lista-custom"><span>${d.nome}</span><button onclick="excluirDestino(${d.id})" style="color:red;border:none;background:none;">Del</button></li>`).join(''); 
 }
 window.excluirDestino = async (id) => { 
-    if(confirm("Excluir local?")) { 
-        const {error} = await sb.from('destinos').delete().eq('id',id); 
-        if(error) alert("Item em uso no histórico."); 
-        else { carregarListaDestinosEdit(); carregarDestinos(); }
-    } 
+    const result = await Swal.fire({ title: 'Excluir local?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Sim' });
+    if(result.isConfirmed) { const {error} = await sb.from('destinos').delete().eq('id',id); if(error) Swal.fire('Erro', 'Local em uso.', 'error'); else { Swal.fire('Excluído', '', 'success'); carregarListaDestinosEdit(); carregarDestinos(); } } 
 };
 async function carregarDestinos() { 
     const {data} = await sb.from('destinos').select('*').order('nome'); 
     if(data) els.movDestino.innerHTML = data.map(d=>`<option value="${d.id}">${d.nome}</option>`).join(''); 
 }
 
-// --- UTILITÁRIOS (SCANNER BARCODE) ---
+// --- UTILITÁRIOS ---
 function iniciarScanner(elemId, cb) { 
     if(scannerAtivo) scannerAtivo.clear().catch(()=>{}); 
     scannerAtivo = new Html5Qrcode(elemId); 
-    
-    // Configurações para Código de Barras (Widescreen)
-    const config = {
-        fps: 20,
-        qrbox: { width: 320, height: 100 },
-        aspectRatio: 2.0,
-        experimentalFeatures: { useBarCodeDetectorIfSupported: true }
-    };
-
-    scannerAtivo.start({ facingMode: "environment" }, config, cb)
-    .catch(err => alert("Erro Câmera: " + err)); 
+    const config = { fps: 20, qrbox: { width: 320, height: 100 }, aspectRatio: 2.0, experimentalFeatures: { useBarCodeDetectorIfSupported: true } };
+    scannerAtivo.start({ facingMode: "environment" }, config, cb).catch(err => Swal.fire('Erro Câmera', err, 'error')); 
 }
 function pararScanner() { if(scannerAtivo) { scannerAtivo.stop().catch(()=>{}); scannerAtivo=null; } }
 els.btnScanCad.addEventListener('click', () => { els.areaScannerCad.classList.remove('hidden'); iniciarScanner("reader-cad", c => { els.cadCodigo.value=c; pararScannerCadastro(); }); });

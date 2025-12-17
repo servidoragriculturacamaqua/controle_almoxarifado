@@ -1,0 +1,21 @@
+{
+  "name": "Estoque Agricultura",
+  "short_name": "Estoque",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#eceff1",
+  "theme_color": "#27ae60",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
